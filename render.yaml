@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: coach-tools-frontend
+    runtime: docker
+    dockerfilePath: Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: ""
