@@ -1,9 +1,13 @@
 services:
   - type: web
     name: coach-tools-frontend
-    runtime: docker
-    dockerfilePath: Dockerfile
-    dockerContext: .
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: out
     envVars:
       - key: NEXT_PUBLIC_API_URL
         value: ""
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
