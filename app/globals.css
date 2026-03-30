@@ -1,23 +1,28 @@
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --garijp-blue: #0fb0d4;
+  --garijp-red: rgb(235, 86, 94);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-garijp-blue: var(--garijp-blue);
+  --color-garijp-red: var(--garijp-red);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
+.dark {
+    --background: #1b1a1a;
     --foreground: #ededed;
+    --garijp-blue: #004a54;
+    --garijp-red: rgb(235, 86, 94);
   }
-}
 
 body {
   background: var(--background);

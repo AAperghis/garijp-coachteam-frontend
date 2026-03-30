@@ -1,9 +1,15 @@
 import Link from "next/link";
+import LocalFont from "next/font/local";
+
+const oneDir = LocalFont({
+  src: '../fonts/OneDirection.ttf',
+  weight: '500',
+})
 
 export default function Home() {
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-3xl font-bold tracking-tight">Coach Team Tools</h1>
+      <h1 className={`${oneDir.className} text-7xl text-garijp-red font-bold tracking-tight`}>Coach Team Tools</h1>
       <p className="text-zinc-600 dark:text-zinc-400">
         Planning tools for coach teams. Choose a tool below to get started.
       </p>
