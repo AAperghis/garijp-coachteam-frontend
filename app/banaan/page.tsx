@@ -7,6 +7,7 @@ import UploadStep from "./components/UploadStep";
 import PreviewStep from "./components/StudentInput";
 import ResultStep from "./components/ResultStep";
 import { BanaanExamples } from "./components/Examples";
+import TabBar from "./components/TabBar";
 
 function BanaanHeader() {
   const { step, reset } = useBanaan();
@@ -28,30 +29,10 @@ function BanaanHeader() {
 
 type Tab = "input" | "output";
 
-function TabBar({ tab, setTab }: { tab: Tab; setTab: (t: Tab) => void }) {
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "input", label: "Input" },
-    { id: "output", label: "Output" },
-  ];
-
-  return (
-    <div className="flex gap-1 border-b border-zinc-200 dark:border-zinc-800">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          onClick={() => setTab(t.id)}
-          className={`px-4 py-2 text-sm font-medium transition-colors ${
-            tab === t.id
-              ? "border-b-2 border-garijp-blue text-foreground"
-              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-          }`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+const BANAAN_TABS: { id: Tab; label: string }[] = [
+  { id: "input", label: "Input" },
+  { id: "output", label: "Output" },
+];
 
 function BanaanContent() {
   const { step, result } = useBanaan();
@@ -65,7 +46,7 @@ function BanaanContent() {
   return (
     <div className="flex flex-col gap-6">
       <BanaanHeader />
-      {hasResult && <TabBar tab={tab} setTab={setTab} />}
+      {hasResult && <TabBar tab={tab} setTab={setTab} tabs={BANAAN_TABS} />}
       <div className={hasResult && tab !== "input" ? "hidden" : ""}>
         <div className="flex flex-col gap-6 md:flex-row">
           <div className="shrink-0">

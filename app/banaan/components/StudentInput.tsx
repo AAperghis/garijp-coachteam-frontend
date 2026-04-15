@@ -4,9 +4,17 @@ import { useBanaan } from "./context";
 import SearchableSelect from "./SearchableSelect";
 import { DISCIPLINES } from "../disciplines";
 import type { StudentInput as StudentType, InstructorInput, ConfigInput } from "../types";
+import { useState } from "react";
+import TabBar from "./TabBar";
 
 const cellClass =
   "w-full bg-transparent px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-garijp-blue";
+
+const inputTabs = [
+  { id: "students", label: "Students" },
+  { id: "instructors", label: "Instructors" },
+  { id: "config", label: "Config" },
+] as const;
 
 export default function StudentInputStep() {
   const {
@@ -20,6 +28,8 @@ export default function StudentInputStep() {
     setInstructors,
     setConfig,
   } = useBanaan();
+  const [currentView, setCurrentView] = useState<"students" | "instructors" | "config">("students");
+
   if ((step !== "preview" && step !== "result") || !students || !instructors || !config)
     return null;
 
@@ -62,6 +72,7 @@ export default function StudentInputStep() {
 
   return (
     <div className="flex flex-col gap-6">
+      <TabBar tab={currentView} setTab={setCurrentView} tabs={inputTabs} />
       <section>
         <h2 className="mb-2 text-lg font-semibold">
           Students ({students.length})
