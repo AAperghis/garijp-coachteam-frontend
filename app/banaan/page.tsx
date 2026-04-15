@@ -7,14 +7,24 @@ import UploadStep from "./components/UploadStep";
 import PreviewStep from "./components/StudentInput";
 import ResultStep from "./components/ResultStep";
 import { BanaanExamples } from "./components/Examples";
-import TabBar from "./components/TabBar";
+import TabBar from "../components/TabBar";
 
 function BanaanHeader() {
-  const { step, reset } = useBanaan();
+  const { step, reset, handleSolve, loading } = useBanaan();
 
   return (
     <div className="flex items-center justify-between">
       <h1 className="text-2xl font-bold tracking-tight">Banaan</h1>
+      <div className="flex items-center gap-4">
+      {step !== "upload" && (
+        <button
+          onClick={handleSolve}
+          disabled={loading}
+          className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          {loading ? "Solving…" : "Solve"}
+        </button>
+      )}
       {step !== "upload" && (
         <button
           onClick={reset}
@@ -23,6 +33,7 @@ function BanaanHeader() {
           Start over
         </button>
       )}
+      </div>
     </div>
   );
 }

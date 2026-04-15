@@ -5,7 +5,7 @@ import SearchableSelect from "./SearchableSelect";
 import { DISCIPLINES } from "../disciplines";
 import type { StudentInput as StudentType, InstructorInput, ConfigInput } from "../types";
 import { useState } from "react";
-import TabBar from "./TabBar";
+import TabBar from "../../components/TabBar";
 
 const cellClass =
   "w-full bg-transparent px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-garijp-blue";
@@ -22,8 +22,6 @@ export default function StudentInputStep() {
     students,
     instructors,
     config,
-    loading,
-    handleSolve,
     setStudents,
     setInstructors,
     setConfig,
@@ -73,7 +71,8 @@ export default function StudentInputStep() {
   return (
     <div className="flex flex-col gap-6">
       <TabBar tab={currentView} setTab={setCurrentView} tabs={inputTabs} />
-      <section>
+
+      <section className={currentView !== "students" ? "hidden" : ""}>
         <h2 className="mb-2 text-lg font-semibold">
           Students ({students.length})
         </h2>
@@ -139,7 +138,7 @@ export default function StudentInputStep() {
         </div>
       </section>
 
-      <section>
+      <section className={currentView !== "instructors" ? "hidden" : ""}>
         <h2 className="mb-2 text-lg font-semibold">
           Instructors ({instructors.length})
         </h2>
@@ -189,7 +188,7 @@ export default function StudentInputStep() {
         </div>
       </section>
 
-      <section>
+      <section className={currentView !== "config" ? "hidden" : ""}>
         <h2 className="mb-2 text-lg font-semibold">Config</h2>
         <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-200 p-4 text-sm dark:border-zinc-800 sm:grid-cols-3">
           <label className="flex flex-col gap-1">
@@ -248,16 +247,6 @@ export default function StudentInputStep() {
           </label>
         </div>
       </section>
-
-      {step === "preview" && (
-        <button
-          onClick={handleSolve}
-          disabled={loading}
-          className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          {loading ? "Solving…" : "Solve"}
-        </button>
-      )}
     </div>
   );
 }

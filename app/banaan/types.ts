@@ -31,11 +31,18 @@ export interface GroupOutput {
   disciplines: string[];
   transport_instructor: string | null;
 }
+// ToDo Fix! These are incorrect in the backend
+export interface RideOutput {
+  slot: number;
+  time: string;
+  students: string[];
+  count: number;
+  transport_instructors: string | null;
+}
 
 export interface BanaanResponse {
-  groups: GroupOutput[];
-  non_banana_assignments: Record<string, string>;
-  total_groups: number;
+  rides: RideOutput[];
+  total_rides: number;
   total_banana_students: number;
 }
 
