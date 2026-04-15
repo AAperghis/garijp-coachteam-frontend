@@ -19,6 +19,9 @@ interface BanaanContextValue {
   error: string | null;
   loading: boolean;
   step: Step;
+  setStudents: React.Dispatch<React.SetStateAction<StudentInput[] | null>>;
+  setInstructors: React.Dispatch<React.SetStateAction<InstructorInput[] | null>>;
+  setConfig: React.Dispatch<React.SetStateAction<ConfigInput | null>>;
   handleUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
   handleSolve: () => Promise<void>;
   handleDownload: () => Promise<void>;
@@ -141,6 +144,9 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         error,
         loading,
         step,
+        setStudents,
+        setInstructors,
+        setConfig,
         handleUpload,
         handleSolve,
         handleDownload,
