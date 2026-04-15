@@ -30,9 +30,9 @@ export default function RootLayout({
         
         <ThemeProvider>
           <AwakeProvider>
-            <nav className="border-b border-garijp-red bg-garijp-blue ">
+            <nav className="border-b border-garijp-red bg-garijp-blue w-full">
 
-            <div className="mx-auto flex max-w-4xl items-center gap-6 px-6 py-4">
+            <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-4 sm:gap-6 sm:px-6">
               <Link href="/" className={`text-lg font-semibold tracking-tight text-white`}>
                 <Image src = "/images/garijp_logo_watersportcentrum_white-e1615810973602.webp" alt="Garijp Logo"  width={128} height={64} className="inline mr-2"/>
               </Link>
@@ -53,7 +53,7 @@ export default function RootLayout({
             </div>
           </nav>
           <LoadingScreen/>
-          <main className="mx-auto max-w-4xl px-6 py-10">{children}</main>
+          <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">{children}</main>
           </AwakeProvider>
         </ThemeProvider>
       </body>

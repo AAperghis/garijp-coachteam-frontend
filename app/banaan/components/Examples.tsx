@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Download } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-async function downloadExample(name: string) {
-    const response = await fetch(`${API_URL}/examples/banaan/${name}.xlsx`);
+async function downloadExample(filename: string) {
+    const response = await fetch(`${API_URL}/examples/banaan/${filename}`);
     if (!response.ok) {
         throw new Error("Failed to download example");
     }
@@ -13,13 +14,18 @@ async function downloadExample(name: string) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${name}.xlsx`;
+    a.download = `${filename}`;
     a.click();
     URL.revokeObjectURL(url);
 }
 
+interface ExampleFile {
+    name: string;
+    filename: string;
+}
+
 export function BanaanExamples() {
-    const [examples, setExamples] = useState<string[]>([]);
+    const [examples, setExamples] = useState<ExampleFile[]>([]);
     const [error, setError] = useState(false);
 
     useEffect(() => {
@@ -28,7 +34,10 @@ export function BanaanExamples() {
                 if (!res.ok) throw new Error("Failed to load examples");
                 return res.json();
             })
-            .then(data => setExamples(data))
+            .then(data => {
+                console.log(data);
+                setExamples(data);
+            })
             .catch(() => setError(true));
     }, []);
 
@@ -38,13 +47,16 @@ export function BanaanExamples() {
             {error ? (
                 <p className="text-sm text-red-600">Failed to load examples</p>
             ) : (
-                examples.map((name: string) => (
+                examples.map((example: ExampleFile) => (
                     <button
-                        key={name}
-                        onClick={() => downloadExample(name)}
-                        className="text-sm text-blue-600 hover:underline"
+                        key={example.name}
+                        onClick={() => downloadExample(example.filename)}
+                        className="cursor-pointer rounded-lg bg-garijp-blue px-2 py-1 text-sm hover:underline"
                     >
-                        {name}
+                        <div className="flex items-center gap-2">
+                            <Download className="h-4 w-4" />
+                            <div>{example.name}</div>
+                        </div>
                     </button>
                 ))
             )}

@@ -2,9 +2,9 @@
 
 import { useBanaan } from "./context";
 
-export default function PreviewStep() {
+export default function StudentInput() {
   const { step, students, instructors, config, loading, handleSolve } = useBanaan();
-  if (step !== "preview" || !students || !instructors || !config) return null;
+  if ((step !== "preview" && step !== "result") || !students || !instructors || !config) return null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,13 +101,15 @@ export default function PreviewStep() {
         </div>
       </section>
 
-      <button
-        onClick={handleSolve}
-        disabled={loading}
-        className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-      >
-        {loading ? "Solving…" : "Solve"}
-      </button>
+      {step === "preview" && (
+        <button
+          onClick={handleSolve}
+          disabled={loading}
+          className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+        >
+          {loading ? "Solving…" : "Solve"}
+        </button>
+      )}
     </div>
   );
 }
