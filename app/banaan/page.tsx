@@ -9,32 +9,63 @@ import ResultStep from "./components/ResultStep";
 import { BanaanExamples } from "./components/Examples";
 import TabBar from "../components/TabBar";
 
+function SolveProgressOverlay() {
+  const { loading, progress } = useBanaan();
+  if (!loading) return null;
+
+  const pct = progress ? Math.round(progress.time_fraction * 100) : 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="mx-4 flex w-full max-w-md flex-col gap-4 rounded-2xl bg-white p-8 shadow-xl dark:bg-zinc-900">
+        <h2 className="text-center text-lg font-semibold">Solving…</h2>
+        <div className="h-3 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+          <div
+            className="h-full rounded-full bg-garijp-blue transition-all duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        {progress ? (
+          <div className="flex justify-between text-sm text-zinc-500">
+            <span>
+              {progress.solutions_found} solution{progress.solutions_found !== 1 ? "s" : ""} found
+            </span>
+            <span>{progress.elapsed.toFixed(0)}s / {progress.timeout}s</span>
+          </div>
+        ) : (
+          <p className="text-center text-sm text-zinc-500">Starting solver…</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function BanaanHeader() {
   const { step, reset, handleSolve, loading } = useBanaan();
 
   return (
     <div className="flex items-center justify-between">
-      <h1 className="text-2xl font-bold tracking-tight">Banaan</h1>
-      <div className="flex items-center gap-4">
-      {step !== "upload" && (
-        <button
-          onClick={handleSolve}
-          disabled={loading}
-          className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          {loading ? "Solving…" : "Solve"}
-        </button>
-      )}
-      {step !== "upload" && (
-        <button
-          onClick={reset}
-          className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
-        >
-          Start over
-        </button>
-      )}
+        <h1 className="text-2xl font-bold tracking-tight">Banaan</h1>
+        <div className="flex items-center gap-4">
+        {step !== "upload" && (
+          <button
+            onClick={handleSolve}
+            disabled={loading}
+            className="self-start rounded-lg bg-zinc-900 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          >
+            {loading ? "Solving…" : "Solve"}
+          </button>
+        )}
+        {step !== "upload" && (
+          <button
+            onClick={reset}
+            className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Start over
+          </button>
+        )}
+        </div>
       </div>
-    </div>
   );
 }
 
@@ -56,6 +87,7 @@ function BanaanContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <SolveProgressOverlay />
       <BanaanHeader />
       {hasResult && <TabBar tab={tab} setTab={setTab} tabs={BANAAN_TABS} />}
       <div className={hasResult && tab !== "input" ? "hidden" : ""}>

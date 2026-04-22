@@ -22,9 +22,11 @@ export default function StudentInputStep() {
     students,
     instructors,
     config,
+    timeout,
     setStudents,
     setInstructors,
     setConfig,
+    setTimeout,
   } = useBanaan();
   const [currentView, setCurrentView] = useState<"students" | "instructors" | "config">("students");
 
@@ -84,7 +86,7 @@ export default function StudentInputStep() {
                 <th className="px-4 py-2">Discipline</th>
                 <th className="px-4 py-2">Instructor</th>
                 <th className="px-4 py-2">Banana?</th>
-                <th className="px-4 py-2">Friend</th>
+                <th className="px-4 py-2">Friends</th>
               </tr>
             </thead>
             <tbody>
@@ -124,9 +126,9 @@ export default function StudentInputStep() {
                   </td>
                   <td>
                     <SearchableSelect
-                      value={s.friend ?? ""}
+                      value={s.friends?.[0] ?? ""}
                       options={studentNames.filter((n) => n !== s.name)}
-                      onChange={(v) => updateStudent(i, "friend", v || null)}
+                      onChange={(v) => updateStudent(i, "friends", v ? [v] : null)}
                       placeholder="—"
                       allowEmpty
                     />
@@ -210,21 +212,21 @@ export default function StudentInputStep() {
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-500">Prep time (min)</span>
+            <span className="text-zinc-500">Prep slots</span>
             <input
               type="number"
               className="rounded border border-zinc-200 bg-transparent px-2 py-1 dark:border-zinc-700"
-              value={config.prep_time_min}
-              onChange={(e) => updateConfig("prep_time_min", Number(e.target.value))}
+              value={config.prep_slots}
+              onChange={(e) => updateConfig("prep_slots", Number(e.target.value))}
             />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-zinc-500">Transport time (min)</span>
+            <span className="text-zinc-500">Transit slots</span>
             <input
               type="number"
               className="rounded border border-zinc-200 bg-transparent px-2 py-1 dark:border-zinc-700"
-              value={config.transport_time_min}
-              onChange={(e) => updateConfig("transport_time_min", Number(e.target.value))}
+              value={config.transit_slots}
+              onChange={(e) => updateConfig("transit_slots", Number(e.target.value))}
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -243,6 +245,17 @@ export default function StudentInputStep() {
               className="rounded border border-zinc-200 bg-transparent px-2 py-1 dark:border-zinc-700"
               value={config.end_time}
               onChange={(e) => updateConfig("end_time", e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-zinc-500">Solver timeout (s)</span>
+            <input
+              type="number"
+              min={30}
+              max={3600}
+              className="rounded border border-zinc-200 bg-transparent px-2 py-1 dark:border-zinc-700"
+              value={timeout}
+              onChange={(e) => setTimeout(Number(e.target.value))}
             />
           </label>
         </div>
