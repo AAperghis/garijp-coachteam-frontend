@@ -107,7 +107,15 @@ export default function InstructorsTab() {
       </div>
 
       {/* Editable table */}
+      <div>
+        <h2 className="text-lg font-semibold">Staf en taak voorkeur</h2>
+        <p className="mt-1 text-sm text-zinc-500">
+        Vul hier de lijst aan staf in samen met een voorkeur voor bepaalde taken. De optimalisatie zal er voor zorgen dat mensen zoveel mogelijk taken krijgen waar ze een hoge voorkeur voor hebben, maar zal ook rekening houden met de totale verdeling van taken over de staf. De voorkeuren zijn optioneel, je kunt ook alleen een lijst met namen invullen.
+        </p>
+      </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
+
+
         <table className="w-full text-left text-sm">
           <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
             <tr>
@@ -328,7 +336,7 @@ function BlocksMatrix({
     <section className="flex flex-col gap-3">
       <div>
         <h2 className="text-lg font-semibold">Blokkades</h2>
-        <p className="mt-1 text-xs text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-500">
           Vink aan om een instructeur te blokkeren van een taak. Klik op een
           naam om een hele rij of kolom te vullen.
         </p>
