@@ -8,11 +8,11 @@ import type {
   Schedule,
   Step,
 } from "../types";
-import { DEFAULT_TASKS, DEFAULT_CONFIG, DEFAULT_PEOPLE } from "../defaults";
+import { DEFAULT_TASKS, DEFAULT_CONFIG_ZOMER, DEFAULT_PEOPLE } from "../defaults";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const STORAGE_KEY = "rooster-state";
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 5;
 
 interface PersistedState {
   _v?: number;
@@ -80,7 +80,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
     persisted.current?.people ?? [...DEFAULT_PEOPLE],
   );
   const [config, setConfig] = useState<RosterConfig>(
-    persisted.current?.config ?? { ...DEFAULT_CONFIG },
+    persisted.current?.config ?? { ...DEFAULT_CONFIG_ZOMER },
   );
   const [schedule, setSchedule] = useState<Schedule | null>(
     persisted.current?.schedule ?? null,
@@ -135,7 +135,9 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.detail ?? `Solve failed (${res.status})`);
+        const detail = body?.detail;
+        const msg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Solve failed (${res.status})`;
+        throw new Error(msg);
       }
       const data = await res.json();
       setSchedule(data.schedule);
@@ -160,7 +162,9 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
-        throw new Error(body?.detail ?? `Download failed (${res.status})`);
+        const detail = body?.detail;
+        const msg = typeof detail === "string" ? detail : detail ? JSON.stringify(detail) : `Download failed (${res.status})`;
+        throw new Error(msg);
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -179,7 +183,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
   function restoreDefaults() {
     setTasks([...DEFAULT_TASKS]);
     setPeople([...DEFAULT_PEOPLE]);
-    setConfig({ ...DEFAULT_CONFIG });
+    setConfig({ ...DEFAULT_CONFIG_ZOMER });
     setSchedule(null);
     setStep("input");
   }
@@ -187,7 +191,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
   function reset() {
     setTasks([...DEFAULT_TASKS]);
     setPeople([...DEFAULT_PEOPLE]);
-    setConfig({ ...DEFAULT_CONFIG });
+    setConfig({ ...DEFAULT_CONFIG_ZOMER });
     setSchedule(null);
     setError(null);
     setStep("input");

@@ -25,7 +25,36 @@ export default function TasksTab() {
   }
 
   function removeTask(index: number) {
+    const removedId = tasks[index].id;
     setTasks((prev) => prev.filter((_, i) => i !== index));
+    setConfig((prev) => ({
+      ...prev,
+      task_conflicts: prev.task_conflicts.filter(
+        ([a, b]) => a !== removedId && b !== removedId,
+      ),
+    }));
+  }
+
+  // ─── Disabled task-day helpers ───
+
+  function isDisabled(taskId: string, day: string) {
+    return config.disabled_task_days[taskId]?.includes(day) ?? false;
+  }
+
+  function toggleDisabled(taskId: string, day: string) {
+    setConfig((prev) => {
+      const current = prev.disabled_task_days[taskId] ?? [];
+      const updated = current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day];
+      const next = { ...prev.disabled_task_days };
+      if (updated.length === 0) {
+        delete next[taskId];
+      } else {
+        next[taskId] = updated;
+      }
+      return { ...prev, disabled_task_days: next };
+    });
   }
 
   // ─── Conflict helpers ───
@@ -61,7 +90,17 @@ export default function TasksTab() {
               <th className="px-4 py-2">Naam</th>
               <th className="w-28 px-4 py-2">Voorkeur</th>
               <th className="w-28 px-4 py-2">Min</th>
+
+              {config.days.map((day) => (
+                  <td
+                    key={day}
+                    className="whitespace-nowrap px-2 py-2 text-center text-xs font-medium"
+                  >
+                    {day}
+                  </td>
+              ))}
               <th className="w-16 px-4 py-2" />
+              <th className="px-3 py-2" />
             </tr>
           </thead>
           <tbody>
@@ -105,6 +144,17 @@ export default function TasksTab() {
                     className="w-full rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
                   />
                 </td>
+                {config.days.map((day) => (
+                  <td key={day} className="px-2 py-1.5 text-center">
+                    <input
+                      type="checkbox"
+                      checked={!isDisabled(task.id, day)}
+                      onChange={() => toggleDisabled(task.id, day)}
+                      className="h-4 w-4 cursor-pointer rounded border-zinc-300 accent-zinc-900 dark:border-zinc-600 dark:accent-zinc-100"
+                    />
+                  </td>
+                ))}
+
                 <td className="px-4 py-1.5 text-center">
                   <button
                     onClick={() => removeTask(i)}
@@ -132,7 +182,7 @@ export default function TasksTab() {
         <section className="flex flex-col gap-3">
           <div>
             <h2 className="text-lg font-semibold">Taak-incompatibiliteiten</h2>
-            <p className="mt-1 text-xs text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-500">
               Taken die niet door dezelfde persoon op dezelfde dag mogen worden
               gedaan.
             </p>

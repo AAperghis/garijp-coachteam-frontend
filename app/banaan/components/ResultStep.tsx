@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { useBanaan } from "./context";
 import TimelineView from "./TimelineView";
+import HandoffsView from "./HandoffsView";
+import FlowDiagram from "./FlowDiagram";
+import SolveQuality from "./SolveQuality";
 import TabBar from "../../components/TabBar";
 
 const RESULT_TABS = [
   { id: "timeline", label: "Timeline" },
+  { id: "flow", label: "Flow" },
+  { id: "handoffs", label: "Handoffs" },
   { id: "rides", label: "Rides" },
 ] as const;
 
@@ -50,11 +55,24 @@ export default function ResultStep() {
         )}
       </div>
 
+      {/* Optimisation quality */}
+      <SolveQuality />
+
       {hasTimeline && <TabBar tab={tab} setTab={setTab} tabs={RESULT_TABS} />}
 
       {/* Timeline view */}
       <div className={!hasTimeline || tab !== "timeline" ? "hidden" : ""}>
         <TimelineView result={result} />
+      </div>
+
+      {/* Flow diagram */}
+      <div className={!hasTimeline || tab !== "flow" ? "hidden" : ""}>
+        <FlowDiagram result={result} />
+      </div>
+
+      {/* Handoffs view */}
+      <div className={!hasTimeline || tab !== "handoffs" ? "hidden" : ""}>
+        <HandoffsView result={result} />
       </div>
 
       {/* Rides table */}
