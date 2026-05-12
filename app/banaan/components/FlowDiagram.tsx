@@ -30,9 +30,9 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
     for (const [studentName, cells] of Object.entries(student_timeline)) {
       const cell = cells[t];
       if (!cell) continue;
-      let inst = cell.detail;
+      let inst: string | undefined = cell.detail;
       if (!inst && cell.state !== "sailing") {
-        inst = studentTransportInst.get(studentName) ?? null;
+        inst = studentTransportInst.get(studentName);
       }
       if (!inst) continue;
       if (!groups.has(inst)) groups.set(inst, []);
@@ -240,7 +240,6 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
                 fontSize={10}
                 fontWeight={700}
                 fill={color}
-                textTransform="uppercase"
                 letterSpacing={1}
               >
                 {group.discipline.toUpperCase()}

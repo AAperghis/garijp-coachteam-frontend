@@ -62,13 +62,13 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
       if (!cell) continue;
 
       // If the student has a covering instructor (sailing), use that
-      let inst = cell.detail;
+      let inst: string | undefined = cell.detail;
 
       // If no detail (transit/island/banana states), attribute them to
       // their transport instructor so that a student staying with the
       // same instructor doesn't show as a handoff
       if (!inst && cell.state !== "sailing") {
-        inst = studentTransportInst.get(studentName) ?? null;
+        inst = studentTransportInst.get(studentName);
       }
 
       if (!inst) continue;
