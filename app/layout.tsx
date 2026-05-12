@@ -6,7 +6,7 @@ import "./globals.css";
 import { ThemeButton } from "./components/themeButton";
 import { ThemeProvider } from "./context/themeContext";
 import { AwakeProvider } from "./context/wakeupContext";
-import { LoadingScreen } from "./components/loadingScreen";
+import { ConnectingScreen } from "./components/loadingScreen";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,7 +52,7 @@ export default function RootLayout({
               <ThemeButton />
             </div>
           </nav>
-          <LoadingScreen/>
+          <ConnectingScreen/>
           <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">{children}</main>
           </AwakeProvider>
         </ThemeProvider>
