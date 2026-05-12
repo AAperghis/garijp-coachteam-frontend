@@ -54,6 +54,7 @@ interface DevFixture {
 }
 
 export interface SolveProgress {
+  solve_id?: string;
   elapsed: number;
   timeout: number;
   time_fraction: number;
@@ -82,6 +83,7 @@ interface BanaanContextValue {
   handleSolve: () => Promise<void>;
   handleDownload: () => Promise<void>;
   handleSaveDevResult: () => void;
+  stopSolve: () => Promise<void>;
   reset: () => void;
 }
 
@@ -98,7 +100,8 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
   const [step, setStep] = useState<Step>(persisted.current?.step ?? "upload");
   const [progress, setProgress] = useState<SolveProgress | null>(null);
   const [progressHistory, setProgressHistory] = useState<SolveProgress[]>([]);
-  const [timeout, setSolveTimeout] = useState(300);
+  const [timeout, setSolveTimeout] = useState(600);
+  const solveIdRef = useRef<string | null>(null);
 
   // Persist state to localStorage on change
   useEffect(() => {
@@ -163,6 +166,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     setProgress(null);
     setProgressHistory([]);
+    solveIdRef.current = null;
 
     try {
       const res = await fetch(`${API_URL}/banaan/solve-stream`, {
@@ -196,6 +200,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
 
           if (event.type === "progress") {
             const p = event as SolveProgress;
+            if (p.solve_id) solveIdRef.current = p.solve_id;
             setProgress(p);
             setProgressHistory((prev) => [...prev, p]);
           } else if (event.type === "result") {
@@ -212,6 +217,20 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
       setProgress(null);
+    }
+  }
+
+  async function stopSolve() {
+    const id = solveIdRef.current;
+    if (!id) return;
+    try {
+      await fetch(`${API_URL}/banaan/stop`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solve_id: id }),
+      });
+    } catch {
+      // best-effort — solve will finish on its own eventually
     }
   }
 
@@ -291,6 +310,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         handleSolve,
         handleDownload,
         handleSaveDevResult,
+        stopSolve,
         reset,
       }}
     >

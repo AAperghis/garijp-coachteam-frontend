@@ -10,7 +10,7 @@ import { BanaanExamples } from "./components/Examples";
 import TabBar from "../components/TabBar";
 
 function SolveProgressOverlay() {
-  const { loading, progress } = useBanaan();
+  const { loading, progress, stopSolve } = useBanaan();
   if (!loading) return null;
 
   const timePct = progress ? Math.round(progress.time_fraction * 100) : 0;
@@ -66,6 +66,16 @@ function SolveProgressOverlay() {
           </div>
         ) : (
           <p className="text-center text-sm text-zinc-500">Starting solver…</p>
+        )}
+
+        {/* Stop button — use current best solution */}
+        {progress && progress.solutions_found > 0 && (
+          <button
+            onClick={stopSolve}
+            className="mt-1 w-full rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Stop &amp; use current solution
+          </button>
         )}
       </div>
     </div>
