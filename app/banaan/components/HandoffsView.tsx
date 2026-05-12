@@ -68,7 +68,7 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
       // their transport instructor so that a student staying with the
       // same instructor doesn't show as a handoff
       if (!inst && cell.state !== "sailing") {
-        inst = studentTransportInst.get(studentName) ?? null;
+        inst = studentTransportInst.get(studentName);
       }
 
       if (!inst) continue;
