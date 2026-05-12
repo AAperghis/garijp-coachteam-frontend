@@ -1,9 +1,29 @@
 "use client";
 
+import { useState } from "react";
 import { useRoster } from "./context";
+import { DEFAULT_SOLVER_CONFIG } from "../defaults";
+import type { SolverConfig } from "../types";
 
 export default function ResultTab() {
-  const { schedule, tasks, people, handleDownload, loading } = useRoster();
+  const { schedule, tasks, people, config, setConfig, handleDownload, loading } = useRoster();
+  const [showConfig, setShowConfig] = useState(false);
+
+  const sc = config.solver_config;
+
+  function updateSolverConfig(patch: Partial<SolverConfig>) {
+    setConfig((prev) => ({
+      ...prev,
+      solver_config: { ...prev.solver_config, ...patch },
+    }));
+  }
+
+  function restoreSolverDefaults() {
+    setConfig((prev) => ({
+      ...prev,
+      solver_config: { ...DEFAULT_SOLVER_CONFIG },
+    }));
+  }
 
   if (!schedule) {
     return (
@@ -94,6 +114,65 @@ export default function ResultTab() {
         <span>Gegenereerd door Garijp CoachTeam Tools v1.0</span>
         <span>{today}</span>
       </footer>
+
+      {/* Solver config panel — hidden when printing */}
+      <details
+        className="print:hidden rounded-lg border border-zinc-200 dark:border-zinc-800"
+        open={showConfig}
+        onToggle={(e) => setShowConfig((e.target as HTMLDetailsElement).open)}
+      >
+        <summary className="cursor-pointer select-none px-4 py-3 text-sm font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200">
+          Solver instellingen
+        </summary>
+        <div className="flex flex-col gap-4 border-t border-zinc-200 px-4 py-4 dark:border-zinc-800">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
+            {([
+              ["preference_scale", "Gewicht aan staf voorkeuren"],
+              ["multi_task_day_penalty", "Straf voor meerdere taken op dezelfde dag"],
+              ["repeat_penalty", "Straf voor het herhalen van dezelfde taak"],
+              ["no_repeat_penalty", "Extra straf voor het herhalen van taken die liever maar 1 keer gedaan worden (Zie lijst beneden)"],
+              ["balance_penalty", "Straf voor ongelijke taakverdeling over staf)"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex flex-col gap-1 text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={sc[key]}
+                  onChange={(e) =>
+                    updateSolverConfig({ [key]: parseInt(e.target.value) || 0 })
+                  }
+                  className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+                />
+              </label>
+            ))}
+            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+              <span className="text-zinc-500 dark:text-zinc-400">
+                Taken die liever maar een keer gedaan worden (kommagescheiden IDs)
+              </span>
+              <input
+                type="text"
+                value={sc.no_repeat_tasks.join(", ")}
+                onChange={(e) =>
+                  updateSolverConfig({
+                    no_repeat_tasks: e.target.value
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+                className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+              />
+            </label>
+          </div>
+          <button
+            onClick={restoreSolverDefaults}
+            className="self-start text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+          >
+            Herstel standaard instellingen
+          </button>
+        </div>
+      </details>
 
       {/* Action buttons — hidden when printing */}
       <div className="flex gap-0 print:hidden">
