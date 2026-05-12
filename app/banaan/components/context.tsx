@@ -58,6 +58,8 @@ export interface SolveProgress {
   timeout: number;
   time_fraction: number;
   gap: number;
+  objective: number;
+  bound: number;
   solutions_found: number;
 }
 
@@ -69,6 +71,7 @@ interface BanaanContextValue {
   error: string | null;
   loading: boolean;
   progress: SolveProgress | null;
+  progressHistory: SolveProgress[];
   timeout: number;
   step: Step;
   setStudents: React.Dispatch<React.SetStateAction<StudentInput[] | null>>;
@@ -94,6 +97,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<Step>(persisted.current?.step ?? "upload");
   const [progress, setProgress] = useState<SolveProgress | null>(null);
+  const [progressHistory, setProgressHistory] = useState<SolveProgress[]>([]);
   const [timeout, setSolveTimeout] = useState(300);
 
   // Persist state to localStorage on change
@@ -158,6 +162,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     setLoading(true);
     setProgress(null);
+    setProgressHistory([]);
 
     try {
       const res = await fetch(`${API_URL}/banaan/solve-stream`, {
@@ -190,7 +195,9 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
           const event = JSON.parse(line);
 
           if (event.type === "progress") {
-            setProgress(event as SolveProgress);
+            const p = event as SolveProgress;
+            setProgress(p);
+            setProgressHistory((prev) => [...prev, p]);
           } else if (event.type === "result") {
             const { type, ...rest } = event;
             setResult(rest as BanaanResponse);
@@ -244,6 +251,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
     setResult(null);
     setError(null);
     setProgress(null);
+    setProgressHistory([]);
     setStep("upload");
     try { localStorage.removeItem(STORAGE_KEY); } catch {}
   }
@@ -272,6 +280,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         error,
         loading,
         progress,
+        progressHistory,
         timeout,
         step,
         setStudents,
