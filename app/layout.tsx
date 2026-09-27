@@ -6,6 +6,8 @@ import "./globals.css";
 import { ThemeButton } from "./components/themeButton";
 import { ThemeProvider } from "./context/themeContext";
 import { AwakeProvider } from "./context/wakeupContext";
+import { WeekProvider } from "./context/weekContext";
+import { WeekSelector } from "./components/WeekSelector";
 import { ConnectingScreen } from "./components/loadingScreen";
 
 const geistSans = Geist({
@@ -30,11 +32,24 @@ export default function RootLayout({
         
         <ThemeProvider>
           <AwakeProvider>
+            <WeekProvider>
             <nav className="border-b border-garijp-red bg-garijp-blue w-full">
 
-            <div className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-4 sm:gap-6 sm:px-6">
+            <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:gap-6 sm:px-6">
               <Link href="/" className={`text-lg font-semibold tracking-tight text-white`}>
                 <Image src = "/images/garijp_logo_watersportcentrum_white-e1615810973602.webp" alt="Garijp Logo"  width={128} height={64} className="inline mr-2"/>
+              </Link>
+              <Link
+                href="/cursisten"
+                className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"
+              >
+                Cursisten
+              </Link>
+              <Link
+                href="/staff"
+                className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"
+              >
+                Staff
               </Link>
               <Link
                 href="/banaan"
@@ -49,11 +64,13 @@ export default function RootLayout({
                 Rooster
               </Link>
               <div className="ml-auto"/>
+              <WeekSelector />
               <ThemeButton />
             </div>
           </nav>
           <ConnectingScreen/>
           <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">{children}</main>
+            </WeekProvider>
           </AwakeProvider>
         </ThemeProvider>
       </body>
