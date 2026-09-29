@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useBanaan } from "./context";
 import SearchableSelect from "./SearchableSelect";
 import { DISCIPLINES } from "../disciplines";
-import type { StudentInput as StudentType, InstructorInput, ConfigInput } from "../types";
+import type { ConfigInput } from "../types";
 import { useState } from "react";
 import TabBar from "../../components/TabBar";
 
@@ -11,53 +12,27 @@ const cellClass =
   "w-full bg-transparent px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-garijp-blue";
 
 const inputTabs = [
-  { id: "students", label: "Students" },
+  { id: "cursists", label: "Cursists" },
   { id: "instructors", label: "Instructors" },
   { id: "config", label: "Config" },
 ] as const;
 
-export default function StudentInputStep() {
+export default function CursistInputStep() {
   const {
     step,
-    students,
+    cursists,
     instructors,
     config,
     timeout,
-    setStudents,
-    setInstructors,
+    updateCursist,
+    updateInstructor,
     setConfig,
     setTimeout,
   } = useBanaan();
-  const [currentView, setCurrentView] = useState<"students" | "instructors" | "config">("students");
+  const [currentView, setCurrentView] = useState<"cursists" | "instructors" | "config">("cursists");
 
-  if ((step !== "preview" && step !== "result") || !students || !instructors || !config)
+  if ((step !== "preview" && step !== "result") || !cursists || !instructors || !config)
     return null;
-
-  function updateStudent<K extends keyof StudentType>(
-    index: number,
-    key: K,
-    value: StudentType[K],
-  ) {
-    setStudents((prev) => {
-      if (!prev) return prev;
-      const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
-      return next;
-    });
-  }
-
-  function updateInstructor<K extends keyof InstructorInput>(
-    index: number,
-    key: K,
-    value: InstructorInput[K],
-  ) {
-    setInstructors((prev) => {
-      if (!prev) return prev;
-      const next = [...prev];
-      next[index] = { ...next[index], [key]: value };
-      return next;
-    });
-  }
 
   function updateConfig<K extends keyof ConfigInput>(key: K, value: ConfigInput[K]) {
     setConfig((prev) => {
@@ -66,7 +41,7 @@ export default function StudentInputStep() {
     });
   }
 
-  const studentNames = students.map((s) => s.name);
+  const cursistNames = cursists.map((s) => s.name);
   const instructorNames = instructors.map((inst) => inst.name);
   const disciplineOptions = [...DISCIPLINES];
 
@@ -74,10 +49,15 @@ export default function StudentInputStep() {
     <div className="flex flex-col gap-6">
       <TabBar tab={currentView} setTab={setCurrentView} tabs={inputTabs} />
 
-      <section className={currentView !== "students" ? "hidden" : ""}>
-        <h2 className="mb-2 text-lg font-semibold">
-          Students ({students.length})
-        </h2>
+      <section className={currentView !== "cursists" ? "hidden" : ""}>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">
+            Cursists ({cursists.length})
+          </h2>
+          <Link href="/cursisten" className="text-xs text-zinc-500 hover:underline">
+            Namen toevoegen of wijzigen → Cursisten
+          </Link>
+        </div>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -90,45 +70,39 @@ export default function StudentInputStep() {
               </tr>
             </thead>
             <tbody>
-              {students.map((s, i) => (
+              {cursists.map((s, i) => (
                 <tr
-                  key={i}
+                  key={s.id ?? i}
                   className="border-b border-zinc-100 dark:border-zinc-800"
                 >
-                  <td>
-                    <input
-                      className={cellClass}
-                      value={s.name}
-                      onChange={(e) => updateStudent(i, "name", e.target.value)}
-                    />
-                  </td>
+                  <td className="px-4 py-2">{s.name}</td>
                   <td>
                     <SearchableSelect
                       value={s.discipline}
                       options={disciplineOptions}
-                      onChange={(v) => updateStudent(i, "discipline", v)}
+                      onChange={(v) => updateCursist(i, { discipline: v })}
                     />
                   </td>
                   <td>
                     <SearchableSelect
                       value={s.instructor}
                       options={instructorNames}
-                      onChange={(v) => updateStudent(i, "instructor", v)}
+                      onChange={(v) => updateCursist(i, { instructor: v })}
                     />
                   </td>
                   <td className="px-2">
                     <input
                       type="checkbox"
                       checked={s.wants_banana}
-                      onChange={(e) => updateStudent(i, "wants_banana", e.target.checked)}
+                      onChange={(e) => updateCursist(i, { wants_banana: e.target.checked })}
                       className="h-4 w-4 accent-garijp-blue"
                     />
                   </td>
                   <td>
                     <SearchableSelect
                       value={s.friends?.[0] ?? ""}
-                      options={studentNames.filter((n) => n !== s.name)}
-                      onChange={(v) => updateStudent(i, "friends", v ? [v] : null)}
+                      options={cursistNames.filter((n) => n !== s.name)}
+                      onChange={(v) => updateCursist(i, { friends: v ? [v] : null })}
                       placeholder="—"
                       allowEmpty
                     />
@@ -141,9 +115,14 @@ export default function StudentInputStep() {
       </section>
 
       <section className={currentView !== "instructors" ? "hidden" : ""}>
-        <h2 className="mb-2 text-lg font-semibold">
-          Instructors ({instructors.length})
-        </h2>
+        <div className="mb-2 flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">
+            Instructors ({instructors.length})
+          </h2>
+          <Link href="/staff" className="text-xs text-zinc-500 hover:underline">
+            Stafleden toevoegen of (de)activeren → Staff
+          </Link>
+        </div>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -156,21 +135,15 @@ export default function StudentInputStep() {
             <tbody>
               {instructors.map((inst, i) => (
                 <tr
-                  key={i}
+                  key={inst.id ?? i}
                   className="border-b border-zinc-100 dark:border-zinc-800"
                 >
-                  <td>
-                    <input
-                      className={cellClass}
-                      value={inst.name}
-                      onChange={(e) => updateInstructor(i, "name", e.target.value)}
-                    />
-                  </td>
+                  <td className="px-4 py-2">{inst.name}</td>
                   <td>
                     <SearchableSelect
                       value={inst.discipline}
                       options={disciplineOptions}
-                      onChange={(v) => updateInstructor(i, "discipline", v)}
+                      onChange={(v) => updateInstructor(i, { discipline: v })}
                     />
                   </td>
                   <td>
@@ -179,7 +152,7 @@ export default function StudentInputStep() {
                       className={cellClass}
                       value={inst.transport_capacity}
                       onChange={(e) =>
-                        updateInstructor(i, "transport_capacity", Number(e.target.value))
+                        updateInstructor(i, { transport_capacity: Number(e.target.value) })
                       }
                     />
                   </td>

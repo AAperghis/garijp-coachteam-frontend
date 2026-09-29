@@ -108,11 +108,8 @@ export const ROOSTER_PRESETS: RoosterPresets = {
 
 export const DEFAULT_PRESET_KEY = "Zomerweek";
 
-export const DEFAULT_PEOPLE: PersonInput[] = [
+// Pseudo-people that are always in the roster; real staff come from the week's staff list.
+export const FIXED_PEOPLE: PersonInput[] = [
   { id: "ent", name: "Entertainment", editable: false, task_weights: {"avond_programma": 10} },
   { id: "eigen", name: "Eigen Groepjes", editable: false, task_weights: {"theorie_beginner": 10} },
-  { id: "p3", name: "Instructeur 3", editable: true, task_weights: {} },
-  { id: "p4", name: "Instructeur 4", editable: true, task_weights: {} },
-  { id: "p5", name: "Instructeur 5", editable: true, task_weights: {} },
-  { id: "p6", name: "Instructeur 6", editable: true, task_weights: {} },
 ];

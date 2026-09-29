@@ -5,7 +5,7 @@ import { useWeek } from "../context/weekContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-interface Student {
+interface Cursist {
   id: number;
   week_id: number;
   first_name: string;
@@ -20,7 +20,7 @@ interface Student {
 
 export default function CursistenPage() {
   const { activeWeekId, activeWeek } = useWeek();
-  const [rows, setRows] = useState<Student[]>([]);
+  const [rows, setRows] = useState<Cursist[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,9 +32,9 @@ export default function CursistenPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/weeks/${activeWeekId}/students`);
+      const res = await fetch(`${API_URL}/weeks/${activeWeekId}/cursists`);
       if (!res.ok) throw new Error(`Kon cursisten niet laden (${res.status})`);
-      setRows((await res.json()) as Student[]);
+      setRows((await res.json()) as Cursist[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kon cursisten niet laden");
     } finally {
@@ -48,37 +48,37 @@ export default function CursistenPage() {
 
   async function addRow() {
     if (activeWeekId === null) return;
-    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/students`, {
+    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/cursists`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ first_name: "" }),
     });
     if (res.ok) {
-      const created = (await res.json()) as Student;
+      const created = (await res.json()) as Cursist;
       setRows((prev) => [...prev, created]);
     }
   }
 
-  function setLocal(id: number, patch: Partial<Student>) {
+  function setLocal(id: number, patch: Partial<Cursist>) {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  async function persist(id: number, patch: Partial<Student>) {
+  async function persist(id: number, patch: Partial<Cursist>) {
     if (activeWeekId === null) return;
-    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/students/${id}`, {
+    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/cursists/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
     if (res.ok) {
-      const updated = (await res.json()) as Student;
+      const updated = (await res.json()) as Cursist;
       setRows((prev) => prev.map((r) => (r.id === id ? updated : r)));
     }
   }
 
   async function removeRow(id: number) {
     if (activeWeekId === null) return;
-    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/students/${id}`, {
+    const res = await fetch(`${API_URL}/weeks/${activeWeekId}/cursists/${id}`, {
       method: "DELETE",
     });
     if (res.ok || res.status === 204)

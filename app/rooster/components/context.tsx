@@ -1,6 +1,14 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   PersonInput,
   TaskInput,
@@ -8,29 +16,47 @@ import type {
   Schedule,
   Step,
 } from "../types";
-import { DEFAULT_TASKS, DEFAULT_CONFIG_ZOMER, DEFAULT_PEOPLE } from "../defaults";
+import { DEFAULT_TASKS, DEFAULT_CONFIG_ZOMER, FIXED_PEOPLE } from "../defaults";
+import { useWeek } from "../../context/weekContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
-const STORAGE_KEY = "rooster-state";
-const SCHEMA_VERSION = 5;
+const STORAGE_PREFIX = "rooster-state";
+const SCHEMA_VERSION = 6;
+
+// Roster person ids for week staff are prefixed so they can't clash with FIXED_PEOPLE.
+export const STAFF_ID_PREFIX = "staff-";
+
+interface StaffMember {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
+// Task preferences per roster person id; roster-specific, so kept out of the staff table.
+type TaskWeights = Record<string, Record<string, number>>;
 
 interface PersistedState {
   _v?: number;
   tasks: TaskInput[];
-  people: PersonInput[];
+  people: PersonInput[]; // resolved list, for the print page
+  taskWeights: TaskWeights;
   config: RosterConfig;
   schedule: Schedule | null;
   step: Step;
 }
 
-function loadPersistedState(): PersistedState | null {
+export function rosterStorageKey(weekId: number) {
+  return `${STORAGE_PREFIX}-${weekId}`;
+}
+
+function loadPersistedState(weekId: number): PersistedState | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(rosterStorageKey(weekId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedState;
     if (parsed._v !== SCHEMA_VERSION) {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(rosterStorageKey(weekId));
       return null;
     }
     return parsed;
@@ -39,10 +65,10 @@ function loadPersistedState(): PersistedState | null {
   }
 }
 
-function savePersistedState(state: PersistedState) {
+function savePersistedState(weekId: number, state: PersistedState) {
   try {
     localStorage.setItem(
-      STORAGE_KEY,
+      rosterStorageKey(weekId),
       JSON.stringify({ ...state, _v: SCHEMA_VERSION }),
     );
   } catch {
@@ -51,6 +77,7 @@ function savePersistedState(state: PersistedState) {
 }
 
 interface RosterContextValue {
+  weekId: number | null;
   tasks: TaskInput[];
   people: PersonInput[];
   config: RosterConfig;
@@ -59,9 +86,9 @@ interface RosterContextValue {
   loading: boolean;
   step: Step;
   setTasks: React.Dispatch<React.SetStateAction<TaskInput[]>>;
-  setPeople: React.Dispatch<React.SetStateAction<PersonInput[]>>;
   setConfig: React.Dispatch<React.SetStateAction<RosterConfig>>;
-  handleUploadPeople: (file: File) => Promise<void>;
+  setTaskWeight: (personId: string, taskId: string, value: number) => void;
+  refreshStaff: () => Promise<void>;
   handleSolve: () => Promise<void>;
   handleDownload: () => Promise<void>;
   restoreDefaults: () => void;
@@ -71,55 +98,92 @@ interface RosterContextValue {
 const RosterContext = createContext<RosterContextValue | null>(null);
 
 export function RosterProvider({ children }: { children: React.ReactNode }) {
-  const persisted = useRef(loadPersistedState());
+  const { activeWeekId: weekId } = useWeek();
 
-  const [tasks, setTasks] = useState<TaskInput[]>(
-    persisted.current?.tasks ?? [...DEFAULT_TASKS],
-  );
-  const [people, setPeople] = useState<PersonInput[]>(
-    persisted.current?.people ?? [...DEFAULT_PEOPLE],
-  );
-  const [config, setConfig] = useState<RosterConfig>(
-    persisted.current?.config ?? { ...DEFAULT_CONFIG_ZOMER },
-  );
-  const [schedule, setSchedule] = useState<Schedule | null>(
-    persisted.current?.schedule ?? null,
-  );
+  const [tasks, setTasks] = useState<TaskInput[]>([...DEFAULT_TASKS]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [taskWeights, setTaskWeights] = useState<TaskWeights>({});
+  const [config, setConfig] = useState<RosterConfig>({ ...DEFAULT_CONFIG_ZOMER });
+  const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<Step>(persisted.current?.step ?? "input");
+  const [step, setStep] = useState<Step>("input");
+  // Week whose persisted state has been restored; guards against saving during load.
+  const loadedWeekRef = useRef<number | null>(null);
+
+  const people = useMemo<PersonInput[]>(
+    () => [
+      ...FIXED_PEOPLE,
+      ...staff
+        .filter((s) => s.active)
+        .map((s) => {
+          const id = `${STAFF_ID_PREFIX}${s.id}`;
+          return { id, name: s.name, editable: true, task_weights: taskWeights[id] ?? {} };
+        }),
+    ],
+    [staff, taskWeights],
+  );
+
+  const fetchStaff = useCallback(async (id: number): Promise<StaffMember[]> => {
+    const res = await fetch(`${API_URL}/weeks/${id}/staff`);
+    if (!res.ok) throw new Error(`Kon staf niet laden (${res.status})`);
+    return (await res.json()) as StaffMember[];
+  }, []);
+
+  // Restore per-week tool state and load the week's staff when the week changes.
+  useEffect(() => {
+    loadedWeekRef.current = null;
+    setError(null);
+    if (weekId === null) {
+      setStaff([]);
+      return;
+    }
+
+    const persisted = loadPersistedState(weekId);
+    setTasks(persisted?.tasks ?? [...DEFAULT_TASKS]);
+    setTaskWeights(persisted?.taskWeights ?? {});
+    setConfig(persisted?.config ?? { ...DEFAULT_CONFIG_ZOMER });
+    setSchedule(persisted?.schedule ?? null);
+    setStep(persisted?.step ?? "input");
+    loadedWeekRef.current = weekId;
+
+    let cancelled = false;
+    setLoading(true);
+    fetchStaff(weekId)
+      .then((data) => {
+        if (!cancelled) setStaff(data);
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Kon staf niet laden");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [weekId, fetchStaff]);
 
   useEffect(() => {
-    savePersistedState({ tasks, people, config, schedule, step });
-  }, [tasks, people, config, schedule, step]);
+    if (weekId === null || loadedWeekRef.current !== weekId) return;
+    savePersistedState(weekId, { tasks, people, taskWeights, config, schedule, step });
+  }, [weekId, tasks, people, taskWeights, config, schedule, step]);
 
-  async function handleUploadPeople(file: File) {
+  async function refreshStaff() {
+    if (weekId === null) return;
     setError(null);
-    setLoading(true);
-
-    const form = new FormData();
-    form.append("file", file);
-
     try {
-      const res = await fetch(`${API_URL}/roster/upload`, {
-        method: "POST",
-        body: form,
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.detail ?? `Upload failed (${res.status})`);
-      }
-      const data = await res.json();
-      setPeople(data.people);
-      if (data.tasks?.length) setTasks(data.tasks);
-      if (data.config) {
-        setConfig((prev) => ({ ...prev, ...data.config }));
-      }
+      setStaff(await fetchStaff(weekId));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Upload failed");
-    } finally {
-      setLoading(false);
+      setError(err instanceof Error ? err.message : "Kon staf niet laden");
     }
+  }
+
+  function setTaskWeight(personId: string, taskId: string, value: number) {
+    setTaskWeights((prev) => ({
+      ...prev,
+      [personId]: { ...(prev[personId] ?? {}), [taskId]: value },
+    }));
   }
 
   async function handleSolve() {
@@ -182,27 +246,27 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
 
   function restoreDefaults() {
     setTasks([...DEFAULT_TASKS]);
-    setPeople([...DEFAULT_PEOPLE]);
+    setTaskWeights({});
     setConfig({ ...DEFAULT_CONFIG_ZOMER });
     setSchedule(null);
     setStep("input");
   }
 
+  // Clears tool-local state; the week's staff list is untouched.
   function reset() {
-    setTasks([...DEFAULT_TASKS]);
-    setPeople([...DEFAULT_PEOPLE]);
-    setConfig({ ...DEFAULT_CONFIG_ZOMER });
-    setSchedule(null);
+    restoreDefaults();
     setError(null);
-    setStep("input");
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {}
+    if (weekId !== null) {
+      try {
+        localStorage.removeItem(rosterStorageKey(weekId));
+      } catch {}
+    }
   }
 
   return (
     <RosterContext.Provider
       value={{
+        weekId,
         tasks,
         people,
         config,
@@ -211,9 +275,9 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
         loading,
         step,
         setTasks,
-        setPeople,
         setConfig,
-        handleUploadPeople,
+        setTaskWeight,
+        refreshStaff,
         handleSolve,
         handleDownload,
         restoreDefaults,

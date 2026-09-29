@@ -10,11 +10,11 @@ interface GroupChange {
   slot: number;
   time: string;
   instructor: string;
-  gained: string[]; // students who joined this instructor's group
-  lost: string[];   // students who left this instructor's group
-  /** Where each lost student went: student → destination (instructor name, "island", or "gone") */
+  gained: string[]; // cursists who joined this instructor's group
+  lost: string[];   // cursists who left this instructor's group
+  /** Where each lost cursist went: cursist → destination (instructor name, "island", or "gone") */
   lostTo: Record<string, string>;
-  /** Where each gained student came from: student → source (instructor name, "island", or "new") */
+  /** Where each gained cursist came from: cursist → source (instructor name, "island", or "new") */
   gainedFrom: Record<string, string>;
   /** Group size after the change */
   groupAfter: number;
@@ -25,29 +25,29 @@ interface InstructorSummary {
   name: string;
   /** Number of slot transitions where the group changed. */
   changeCount: number;
-  /** Total students gained/lost across all changes. */
+  /** Total cursists gained/lost across all changes. */
   totalMovements: number;
-  /** Other instructors they exchange students with. */
+  /** Other instructors they exchange cursists with. */
   partners: string[];
 }
 
-// ── Build instructor→students mapping per slot ──────────────────────────
+// ── Build instructor→cursists mapping per slot ──────────────────────────
 
 function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] {
-  const { student_timeline, times, rides } = result;
+  const { cursist_timeline, times, rides } = result;
   const slotCount = times.length;
 
-  // Build student → transport instructor lookup from rides
-  const studentTransportInst = new Map<string, string>();
+  // Build cursist → transport instructor lookup from rides
+  const cursistTransportInst = new Map<string, string>();
   for (const ride of rides) {
-    for (const [student, inst] of Object.entries(ride.student_transport)) {
-      studentTransportInst.set(student, inst);
+    for (const [cursist, inst] of Object.entries(ride.cursist_transport)) {
+      cursistTransportInst.set(cursist, inst);
     }
-    // Fallback: if student_transport is empty, use the first transport instructor
+    // Fallback: if cursist_transport is empty, use the first transport instructor
     if (ride.transport_instructors.length > 0) {
-      for (const student of ride.students) {
-        if (!studentTransportInst.has(student)) {
-          studentTransportInst.set(student, ride.transport_instructors[0]);
+      for (const cursist of ride.cursists) {
+        if (!cursistTransportInst.has(cursist)) {
+          cursistTransportInst.set(cursist, ride.transport_instructors[0]);
         }
       }
     }
@@ -57,15 +57,15 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
 
   for (let t = 0; t < slotCount; t++) {
     const groups = new Map<string, string[]>();
-    for (const [studentName, cells] of Object.entries(student_timeline)) {
+    for (const [cursistName, cells] of Object.entries(cursist_timeline)) {
       const cell = cells[t];
       if (!cell) continue;
 
-      // If the student has a covering instructor (sailing), use that
+      // If the cursist has a covering instructor (sailing), use that
       let inst: string | undefined = cell.detail;
 
       // If no detail (transit/island/banana states), attribute them to
-      // their transport instructor so that a student staying with the
+      // their transport instructor so that a cursist staying with the
       // same instructor doesn't show as a handoff
    
    
@@ -185,10 +185,10 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
 
       if (!inst) continue;
       if (!groups.has(inst)) groups.set(inst, []);
-      groups.get(inst)!.push(studentName);
+      groups.get(inst)!.push(cursistName);
     }
     // Sort each group for stable comparison
-    for (const students of groups.values()) students.sort();
+    for (const cursists of groups.values()) cursists.sort();
     slots.push(groups);
   }
 
@@ -197,14 +197,14 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
 
 function computeGroupChanges(result: BanaanResponse): GroupChange[] {
   const slots = buildInstructorGroups(result);
-  const { student_timeline, times, rides } = result;
+  const { cursist_timeline, times, rides } = result;
   const changes: GroupChange[] = [];
 
-  // Build student → transport instructor lookup from rides
-  const studentTransport = new Map<string, string>();
+  // Build cursist → transport instructor lookup from rides
+  const cursistTransport = new Map<string, string>();
   for (const ride of rides) {
-    for (const [student, inst] of Object.entries(ride.student_transport)) {
-      studentTransport.set(student, inst);
+    for (const [cursist, inst] of Object.entries(ride.cursist_transport)) {
+      cursistTransport.set(cursist, inst);
     }
   }
 
@@ -219,24 +219,24 @@ function computeGroupChanges(result: BanaanResponse): GroupChange[] {
     const curr = slots[t];
 
     for (const instructor of allInstructors) {
-      const prevStudents = new Set(prev.get(instructor) ?? []);
-      const currStudents = new Set(curr.get(instructor) ?? []);
+      const prevCursists = new Set(prev.get(instructor) ?? []);
+      const currCursists = new Set(curr.get(instructor) ?? []);
 
-      const gained = [...currStudents].filter((s) => !prevStudents.has(s));
-      const lost = [...prevStudents].filter((s) => !currStudents.has(s));
+      const gained = [...currCursists].filter((s) => !prevCursists.has(s));
+      const lost = [...prevCursists].filter((s) => !currCursists.has(s));
 
       if (gained.length === 0 && lost.length === 0) continue;
 
-      // Figure out where lost students went
+      // Figure out where lost cursists went
       const lostTo: Record<string, string> = {};
       for (const s of lost) {
-        const cell = student_timeline[s]?.[t];
+        const cell = cursist_timeline[s]?.[t];
         if (cell?.detail && cell.detail !== instructor) {
           // Went to another instructor
           lostTo[s] = cell.detail;
         } else if (cell?.state && cell.state !== "sailing") {
           // Went to island — show the transport instructor if known
-          const transport = studentTransport.get(s);
+          const transport = cursistTransport.get(s);
           const stateName = cell.state.replace(/_/g, " ");
           lostTo[s] = transport ? `${stateName} (${transport})` : stateName;
         } else {
@@ -244,16 +244,16 @@ function computeGroupChanges(result: BanaanResponse): GroupChange[] {
         }
       }
 
-      // Figure out where gained students came from
+      // Figure out where gained cursists came from
       const gainedFrom: Record<string, string> = {};
       for (const s of gained) {
-        const prevCell = student_timeline[s]?.[t - 1];
+        const prevCell = cursist_timeline[s]?.[t - 1];
         if (prevCell?.detail && prevCell.detail !== instructor) {
           // Came from another instructor
           gainedFrom[s] = prevCell.detail;
         } else if (prevCell?.state && prevCell.state !== "sailing") {
           // Returning from island — show the transport instructor if known
-          const transport = studentTransport.get(s);
+          const transport = cursistTransport.get(s);
           const stateName = prevCell.state.replace(/_/g, " ");
           gainedFrom[s] = transport ? `${stateName} (${transport})` : stateName;
         } else {
@@ -269,7 +269,7 @@ function computeGroupChanges(result: BanaanResponse): GroupChange[] {
         lost,
         lostTo,
         gainedFrom,
-        groupAfter: currStudents.size,
+        groupAfter: currCursists.size,
       });
     }
   }
@@ -310,7 +310,7 @@ function computeSummaries(changes: GroupChange[]): InstructorSummary[] {
 
 // ── Components ──────────────────────────────────────────────────────────
 
-function StudentChip({
+function CursistChip({
   name,
   annotation,
   variant,
@@ -346,12 +346,12 @@ function ChangeCard({ change }: { change: GroupChange }) {
         </div>
         <span className="text-sm font-medium">{change.instructor}</span>
         <span className="text-xs text-zinc-400">
-          → {change.groupAfter} student{change.groupAfter !== 1 ? "s" : ""}
+          → {change.groupAfter} cursist{change.groupAfter !== 1 ? "s" : ""}
         </span>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {change.gained.map((s) => (
-          <StudentChip
+          <CursistChip
             key={s}
             name={s}
             annotation={change.gainedFrom[s]}
@@ -359,7 +359,7 @@ function ChangeCard({ change }: { change: GroupChange }) {
           />
         ))}
         {change.lost.map((s) => (
-          <StudentChip
+          <CursistChip
             key={s}
             name={s}
             annotation={change.lostTo[s]}
@@ -381,7 +381,7 @@ function SummaryTable({ summaries }: { summaries: InstructorSummary[] }) {
           <tr>
             <th className="px-4 py-2">Instructor</th>
             <th className="px-4 py-2 text-right">Group changes</th>
-            <th className="px-4 py-2 text-right">Students moved</th>
+            <th className="px-4 py-2 text-right">Cursists moved</th>
             <th className="px-4 py-2">Coordinates with</th>
           </tr>
         </thead>
@@ -428,7 +428,7 @@ export default function HandoffsView({ result }: HandoffsViewProps) {
   if (changes.length === 0) {
     return (
       <p className="text-sm text-zinc-500">
-        No group changes — every instructor keeps the same students throughout
+        No group changes — every instructor keeps the same cursists throughout
         the day.
       </p>
     );
@@ -442,7 +442,7 @@ export default function HandoffsView({ result }: HandoffsViewProps) {
           Instructor coordination summary
         </h3>
         <p className="text-xs text-zinc-500">
-          How many times each instructor&apos;s group of students changes, and
+          How many times each instructor&apos;s group of cursists changes, and
           which other instructors they need to coordinate with.
         </p>
         <SummaryTable summaries={summaries} />
@@ -480,9 +480,9 @@ export default function HandoffsView({ result }: HandoffsViewProps) {
         <p className="text-xs text-zinc-500">
           Each card shows when an instructor&apos;s group changes.{" "}
           <span className="text-green-600 dark:text-green-400">Green</span>{" "}
-          chips are students joining,{" "}
+          chips are cursists joining,{" "}
           <span className="text-red-600 dark:text-red-400">red</span> chips are
-          students leaving, with where they came from or went to.
+          cursists leaving, with where they came from or went to.
         </p>
         <div className="flex flex-col gap-2">
           {filtered.map((c, i) => (

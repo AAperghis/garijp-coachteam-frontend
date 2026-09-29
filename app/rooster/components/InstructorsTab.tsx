@@ -1,116 +1,37 @@
 "use client";
 
-import { useRef, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { useRoster } from "./context";
-import type { PersonInput } from "../types";
-
-let nextId = 1;
-function makePersonId() {
-  return `p_${Date.now()}_${nextId++}`;
-}
 
 export default function InstructorsTab() {
-  const { people, setPeople, tasks, config, setConfig, loading } = useRoster();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const { people, setTaskWeight, refreshStaff, tasks, config, setConfig, loading } = useRoster();
   const [blockDay, setBlockDay] = useState("");
-
-  function addPerson() {
-    setPeople((prev) => [
-      ...prev,
-      { id: makePersonId(), name: "", editable: true, task_weights: {} },
-    ]);
-  }
-
-  function updatePerson(index: number, patch: Partial<PersonInput>) {
-    setPeople((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
-    );
-  }
-
-  function updateWeight(personIndex: number, taskId: string, value: number) {
-    setPeople((prev) =>
-      prev.map((p, i) =>
-        i === personIndex
-          ? { ...p, task_weights: { ...p.task_weights, [taskId]: value } }
-          : p,
-      ),
-    );
-  }
-
-  function removePerson(index: number) {
-    setPeople((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = reader.result as string;
-      const lines = text.split("\n").filter((l) => l.trim());
-      if (lines.length < 2) return;
-
-      const headers = lines[0].split(",").map((h) => h.trim());
-      const nameIdx = headers.findIndex(
-        (h) => h.toLowerCase() === "name" || h.toLowerCase() === "naam",
-      );
-      const idIdx = headers.findIndex((h) => h.toLowerCase() === "id");
-
-      const taskHeaders = headers.filter(
-        (_, i) => i !== nameIdx && i !== idIdx,
-      );
-
-      const parsed: PersonInput[] = [];
-      for (let r = 1; r < lines.length; r++) {
-        const cols = lines[r].split(",").map((c) => c.trim());
-        if (!cols[nameIdx ?? 0]) continue;
-
-        const weights: Record<string, number> = {};
-        for (const th of taskHeaders) {
-          const ci = headers.indexOf(th);
-          const val = parseFloat(cols[ci]);
-          if (!isNaN(val)) weights[th] = val;
-        }
-
-        parsed.push({
-          id: idIdx >= 0 ? cols[idIdx] : makePersonId(),
-          name: cols[nameIdx >= 0 ? nameIdx : 0],
-          task_weights: weights,
-        });
-      }
-
-      if (parsed.length > 0) setPeople(parsed);
-    };
-    reader.readAsText(file);
-    // reset so same file can be re-uploaded
-    if (fileRef.current) fileRef.current.value = "";
-  }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Upload bar */}
-      <div className="flex items-center gap-3">
-        <label className="cursor-pointer rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300">
-          {loading ? "Uploading…" : "Upload CSV / XLSX"}
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,.xlsx"
-            onChange={handleFileUpload}
-            className="hidden"
-            disabled={loading}
-          />
-        </label>
-        <span className="text-xs text-zinc-500">
-          of bewerk de tabel hieronder
+      {/* Source bar */}
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-800">
+        <span className="text-zinc-500">
+          Instructeurs komen uit de staflijst van de geselecteerde week.
         </span>
+        <Link href="/staff" className="text-zinc-700 underline-offset-2 hover:underline dark:text-zinc-300">
+          Staf beheren →
+        </Link>
+        <button
+          onClick={() => void refreshStaff()}
+          disabled={loading}
+          className="ml-auto text-zinc-500 hover:text-zinc-900 disabled:opacity-50 dark:hover:text-zinc-100"
+        >
+          {loading ? "Laden…" : "Vernieuwen"}
+        </button>
       </div>
 
       {/* Editable table */}
       <div>
         <h2 className="text-lg font-semibold">Staf en taak voorkeur</h2>
         <p className="mt-1 text-sm text-zinc-500">
-        Vul hier de lijst aan staf in samen met een voorkeur voor bepaalde taken. De optimalisatie zal er voor zorgen dat mensen zoveel mogelijk taken krijgen waar ze een hoge voorkeur voor hebben, maar zal ook rekening houden met de totale verdeling van taken over de staf. De voorkeuren zijn optioneel, je kunt ook alleen een lijst met namen invullen.
+        Vul hier per staflid een voorkeur voor bepaalde taken in. De optimalisatie zal er voor zorgen dat mensen zoveel mogelijk taken krijgen waar ze een hoge voorkeur voor hebben, maar zal ook rekening houden met de totale verdeling van taken over de staf. De voorkeuren zijn optioneel.
         </p>
       </div>
       <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
@@ -125,36 +46,25 @@ export default function InstructorsTab() {
                   {t.name || t.id}
                 </th>
               ))}
-              <th className="w-16 px-4 py-2" />
             </tr>
           </thead>
           <tbody>
             {people.length === 0 && (
               <tr>
                 <td
-                  colSpan={tasks.length + 2}
+                  colSpan={tasks.length + 1}
                   className="px-4 py-6 text-center text-zinc-400"
                 >
-                  Nog geen instructeurs. Upload een bestand of voeg er een toe.
+                  Nog geen instructeurs. Voeg stafleden toe op de Staff-pagina.
                 </td>
               </tr>
             )}
-            {people.map((person, pi) => (
+            {people.map((person) => (
               <tr
                 key={person.id}
                 className="border-b border-zinc-100 dark:border-zinc-800"
               >
-                <td className="px-4 py-1.5">
-                  <input
-                    type="text"
-                    value={person.name}
-                    onChange={(e) =>
-                      updatePerson(pi, { name: e.target.value })
-                    }
-                    placeholder="Naam"
-                    className="w-full rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
-                  />
-                </td>
+                <td className="px-4 py-1.5">{person.name || person.id}</td>
                 {tasks.map((t) => (
                   <td key={t.id} className="px-2 py-1.5">
                     {person.editable ? (
@@ -164,7 +74,7 @@ export default function InstructorsTab() {
                         max={10}
                         value={person.task_weights[t.id] ?? 0}
                         onChange={(e) =>
-                          updateWeight(pi, t.id, parseFloat(e.target.value) || 0)
+                          setTaskWeight(person.id, t.id, parseFloat(e.target.value) || 0)
                         }
                         className="w-full rounded border border-zinc-200 bg-transparent px-1 py-1 text-center text-sm dark:border-zinc-700"
                       />
@@ -175,27 +85,11 @@ export default function InstructorsTab() {
                     )}
                   </td>
                 ))}
-                <td className="px-4 py-1.5 text-center">
-                  <button
-                    onClick={() => removePerson(pi)}
-                    className="text-zinc-400 hover:text-red-500"
-                    title="Verwijderen"
-                  >
-                    ✕
-                  </button>
-                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <button
-        onClick={addPerson}
-        className="self-start rounded-lg border border-dashed border-zinc-300 px-4 py-2 text-sm text-zinc-500 transition-colors hover:border-zinc-500 hover:text-zinc-700 dark:border-zinc-700 dark:hover:border-zinc-500 dark:hover:text-zinc-300"
-      >
-        + Instructeur toevoegen
-      </button>
 
       {/* Blocks matrix */}
       {people.length > 0 && tasks.length > 0 && (

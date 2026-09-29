@@ -22,7 +22,7 @@ export default function Home() {
             Banaan
           </h2>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            Upload a student list (CSV/XLSX), compute the banana boat schedule,
+            Upload a cursist list (CSV/XLSX), compute the banana boat schedule,
             and download the result.
           </p>
         </Link>

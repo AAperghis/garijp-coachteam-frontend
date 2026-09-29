@@ -23,7 +23,7 @@ export default function ResultStep() {
 
   if (step !== "result" || !result) return null;
 
-  const hasTimeline = result.times && result.instructor_timeline && result.student_timeline;
+  const hasTimeline = result.times && result.instructor_timeline && result.cursist_timeline;
 
   return (
     <div className="flex flex-col gap-6">
@@ -35,9 +35,9 @@ export default function ResultStep() {
         </div>
         <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
           <div className="text-2xl font-bold">
-            {result.total_banana_students}
+            {result.total_banana_cursists}
           </div>
-          <div className="text-sm text-zinc-500">Banana students</div>
+          <div className="text-sm text-zinc-500">Banana cursists</div>
         </div>
         {hasTimeline && (
           <>
@@ -83,7 +83,7 @@ export default function ResultStep() {
               <tr>
                 <th className="px-4 py-2">#</th>
                 <th className="px-4 py-2">Time</th>
-                <th className="px-4 py-2">Students</th>
+                <th className="px-4 py-2">Cursists</th>
                 <th className="px-4 py-2">Count</th>
                 <th className="px-4 py-2">Transport</th>
               </tr>
@@ -96,7 +96,7 @@ export default function ResultStep() {
                 >
                   <td className="px-4 py-2">{i + 1}</td>
                   <td className="px-4 py-2">{r.time}</td>
-                  <td className="px-4 py-2">{r.students.join(", ")}</td>
+                  <td className="px-4 py-2">{r.cursists.join(", ")}</td>
                   <td className="px-4 py-2">{r.count}</td>
                   <td className="px-4 py-2">
                     {r.transport_instructors.join(", ") || "—"}

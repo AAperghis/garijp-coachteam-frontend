@@ -161,7 +161,7 @@ export default function StaffPage() {
               <th className="px-4 py-2">Naam</th>
               <th className="px-2 py-2">Geslacht</th>
               <th className="px-2 py-2">Discipline</th>
-              <th className="px-2 py-2 text-center">CWO</th>
+              <th className="px-2 py-2 text-center">CWO voorkeur</th>
               <th className="px-2 py-2 text-center">Transport</th>
               <th className="px-2 py-2 text-center">Cover</th>
               <th className="px-2 py-2 text-center">Actief</th>
@@ -204,18 +204,21 @@ export default function StaffPage() {
                   </select>
                 </td>
                 <td className="px-2 py-1.5">
-                  <input
-                    type="text"
+                  <select
                     value={r.discipline}
-                    onChange={(e) =>
-                      setLocal(r.id, { discipline: e.target.value })
-                    }
-                    onBlur={(e) =>
-                      persist(r.id, { discipline: e.target.value })
-                    }
-                    placeholder="bv. jz"
-                    className="w-24 rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
-                  />
+                    onChange={(e) => persist(r.id, { discipline: e.target.value })}
+                    className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+                  >
+                    <option value="wal">—</option>
+                    <option value="opti">Optimist</option>
+                    <option value="laerling">Laerling</option>
+                    <option value="valk">Valk</option>
+                    <option value="tirion">Tirion</option>
+                    <option value="zb">Zwaardboot</option>
+                    <option value="cat">Catamaran</option>
+                    <option value="surf">Windsurf</option>
+                    <option value="wingfoil">Wingfoil</option>
+                  </select>
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <input

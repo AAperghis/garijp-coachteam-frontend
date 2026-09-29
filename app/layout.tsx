@@ -40,17 +40,18 @@ export default function RootLayout({
                 <Image src = "/images/garijp_logo_watersportcentrum_white-e1615810973602.webp" alt="Garijp Logo"  width={128} height={64} className="inline mr-2"/>
               </Link>
               <Link
-                href="/cursisten"
-                className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"
-              >
-                Cursisten
-              </Link>
-              <Link
                 href="/staff"
                 className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"
               >
                 Staff
               </Link>
+              <Link
+                href="/cursisten"
+                className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"
+              >
+                Cursisten
+              </Link>
+
               <Link
                 href="/banaan"
                 className="text-lg text-zinc-600 hover:text-zinc-900 dark:text-zinc-100 dark:hover:text-zinc-400"

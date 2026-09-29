@@ -4,21 +4,21 @@ import { useMemo } from "react";
 import type { BanaanResponse } from "../types";
 import { useBanaan } from "./context";
 
-// ── Build instructor→students mapping per slot (same logic as HandoffsView) ──
+// ── Build instructor→cursists mapping per slot (same logic as HandoffsView) ──
 
 function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] {
-  const { student_timeline, times, rides } = result;
+  const { cursist_timeline, times, rides } = result;
   const slotCount = times.length;
 
-  const studentTransportInst = new Map<string, string>();
+  const cursistTransportInst = new Map<string, string>();
   for (const ride of rides) {
-    for (const [student, inst] of Object.entries(ride.student_transport)) {
-      studentTransportInst.set(student, inst);
+    for (const [cursist, inst] of Object.entries(ride.cursist_transport)) {
+      cursistTransportInst.set(cursist, inst);
     }
     if (ride.transport_instructors.length > 0) {
-      for (const student of ride.students) {
-        if (!studentTransportInst.has(student)) {
-          studentTransportInst.set(student, ride.transport_instructors[0]);
+      for (const cursist of ride.cursists) {
+        if (!cursistTransportInst.has(cursist)) {
+          cursistTransportInst.set(cursist, ride.transport_instructors[0]);
         }
       }
     }
@@ -27,18 +27,18 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
   const slots: Map<string, string[]>[] = [];
   for (let t = 0; t < slotCount; t++) {
     const groups = new Map<string, string[]>();
-    for (const [studentName, cells] of Object.entries(student_timeline)) {
+    for (const [cursistName, cells] of Object.entries(cursist_timeline)) {
       const cell = cells[t];
       if (!cell) continue;
       let inst: string | undefined = cell.detail;
       if (!inst && cell.state !== "sailing") {
-        inst = studentTransportInst.get(studentName);
+        inst = cursistTransportInst.get(cursistName);
       }
       if (!inst) continue;
       if (!groups.has(inst)) groups.set(inst, []);
-      groups.get(inst)!.push(studentName);
+      groups.get(inst)!.push(cursistName);
     }
-    for (const students of groups.values()) students.sort();
+    for (const cursists of groups.values()) cursists.sort();
     slots.push(groups);
   }
   return slots;
@@ -49,7 +49,7 @@ function buildInstructorGroups(result: BanaanResponse): Map<string, string[]>[] 
 interface Transfer {
   from: string;
   to: string;
-  students: string[];
+  cursists: string[];
 }
 
 // ── Colour palette ──────────────────────────────────────────────────────
@@ -163,8 +163,8 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
   const maxGroupSize = useMemo(() => {
     let max = 1;
     for (const slot of slots) {
-      for (const students of slot.values()) {
-        max = Math.max(max, students.length);
+      for (const cursists of slot.values()) {
+        max = Math.max(max, cursists.length);
       }
     }
     return max;
@@ -202,13 +202,13 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
     const curr = slots[t];
     const slotTransfers: Transfer[] = [];
 
-    for (const [fromInst, prevStudents] of prev.entries()) {
-      const prevSet = new Set(prevStudents);
-      for (const [toInst, currStudents] of curr.entries()) {
+    for (const [fromInst, prevCursists] of prev.entries()) {
+      const prevSet = new Set(prevCursists);
+      for (const [toInst, currCursists] of curr.entries()) {
         if (fromInst === toInst) continue;
-        const moved = currStudents.filter((s) => prevSet.has(s));
+        const moved = currCursists.filter((s) => prevSet.has(s));
         if (moved.length > 0) {
-          slotTransfers.push({ from: fromInst, to: toInst, students: moved });
+          slotTransfers.push({ from: fromInst, to: toInst, cursists: moved });
         }
       }
     }
@@ -319,9 +319,9 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
         {/* Bars per slot */}
         {slots.map((groups, t) =>
           allInstructors.map((inst, i) => {
-            const students = groups.get(inst);
-            if (!students || students.length === 0) return null;
-            const w = barWidth(students.length);
+            const cursists = groups.get(inst);
+            if (!cursists || cursists.length === 0) return null;
+            const w = barWidth(cursists.length);
             const cx = colCenter(i);
             const y = rowY(t);
             const h = rowHeight - 4;
@@ -344,7 +344,7 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
                   fontSize={10}
                   fontWeight={600}
                 >
-                  {students.length}
+                  {cursists.length}
                 </text>
               </g>
             );
@@ -359,17 +359,17 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
             const toIdx = allInstructors.indexOf(tr.to);
             if (fromIdx < 0 || toIdx < 0) return null;
 
-            const fromStudents = slots[t - 1].get(tr.from) ?? [];
-            const toStudents = slots[t].get(tr.to) ?? [];
-            const fromW = barWidth(fromStudents.length);
-            const toW = barWidth(toStudents.length);
+            const fromCursists = slots[t - 1].get(tr.from) ?? [];
+            const toCursists = slots[t].get(tr.to) ?? [];
+            const fromW = barWidth(fromCursists.length);
+            const toW = barWidth(toCursists.length);
 
             const x1 = colCenter(fromIdx) + (toIdx > fromIdx ? fromW / 2 : -fromW / 2);
             const y1 = rowY(t - 1) + rowHeight - 2;
             const x2 = colCenter(toIdx) + (fromIdx > toIdx ? toW / 2 : -toW / 2);
             const y2 = rowY(t) + 2;
 
-            const strokeW = Math.max(2, (tr.students.length / maxGroupSize) * barMaxWidth * 0.6);
+            const strokeW = Math.max(2, (tr.cursists.length / maxGroupSize) * barMaxWidth * 0.6);
             const midY = (y1 + y2) / 2;
 
             // Curved path
@@ -389,7 +389,7 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
                   opacity={0.45}
                   strokeLinecap="round"
                 />
-                {/* Student names along the transfer line */}
+                {/* Cursist names along the transfer line */}
                 <text
                   x={labelX}
                   y={labelY}
@@ -399,9 +399,9 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
                   fontSize={9}
                   fontWeight={500}
                 >
-                  {tr.students.length <= 3
-                    ? tr.students.join(", ")
-                    : `${tr.students.slice(0, 2).join(", ")} +${tr.students.length - 2}`}
+                  {tr.cursists.length <= 3
+                    ? tr.cursists.join(", ")
+                    : `${tr.cursists.slice(0, 2).join(", ")} +${tr.cursists.length - 2}`}
                 </text>
               </g>
             );

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { BanaanProvider, useBanaan } from "./components/context";
 import ErrorBanner from "./components/ErrorBanner";
 import UploadStep from "./components/UploadStep";
-import PreviewStep from "./components/StudentInput";
+import PreviewStep from "./components/CursistInput";
 import ResultStep from "./components/ResultStep";
 import { BanaanExamples } from "./components/Examples";
 import TabBar from "../components/TabBar";
@@ -119,13 +119,21 @@ const BANAAN_TABS: { id: Tab; label: string }[] = [
 ];
 
 function BanaanContent() {
-  const { step, result } = useBanaan();
+  const { step, result, weekId } = useBanaan();
   const [tab, setTab] = useState<Tab>("input");
   const hasResult = step === "result" && result;
 
   useEffect(() => {
     if (step === "result") setTab("output");
   }, [step]);
+
+  if (weekId === null) {
+    return (
+      <div className="rounded-lg border border-zinc-200 p-8 text-center text-zinc-500 dark:border-zinc-800">
+        Selecteer of maak eerst een week aan (rechtsboven).
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

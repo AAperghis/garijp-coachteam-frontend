@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import type { PersonInput, TaskInput, Schedule } from "../types";
+import { rosterStorageKey } from "../components/context";
 
-const STORAGE_KEY = "rooster-state";
+// Mirrors weekContext's storage key; the print page has no provider tree.
+const ACTIVE_WEEK_KEY = "active-week-id";
 
 interface PersistedState {
   tasks: TaskInput[];
@@ -17,7 +19,9 @@ export default function PrintPage() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const weekId = localStorage.getItem(ACTIVE_WEEK_KEY);
+      if (!weekId) return;
+      const raw = localStorage.getItem(rosterStorageKey(Number(weekId)));
       if (raw) setData(JSON.parse(raw));
     } catch {}
   }, []);

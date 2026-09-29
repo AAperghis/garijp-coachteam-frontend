@@ -12,7 +12,7 @@ const STATE_CONFIG: Record<string, { bg: string; label: string; icon: string }> 
   on_island:    { bg: "bg-yellow-200 dark:bg-yellow-800", label: "On island",      icon: "🏝️" },
   transit_from: { bg: "bg-amber-300 dark:bg-amber-800",  label: "← Back",         icon: "←" },
   covering:     { bg: "bg-violet-200 dark:bg-violet-800", label: "Covering",       icon: "👀" },
-  // Student states
+  // Cursist states
   sailing:      { bg: "bg-sky-200 dark:bg-sky-900",      label: "Sailing",        icon: "⛵" },
   prep:         { bg: "bg-orange-200 dark:bg-orange-800", label: "Prep",           icon: "⏳" },
   on_banana:    { bg: "bg-emerald-300 dark:bg-emerald-800", label: "Banana!",      icon: "🍌" },
@@ -26,7 +26,7 @@ function cellConfig(state: string) {
 
 // ── Legend ───────────────────────────────────────────────────────────────
 
-function Legend({ kind }: { kind: "instructor" | "student" }) {
+function Legend({ kind }: { kind: "instructor" | "cursist" }) {
   const keys = kind === "instructor"
     ? ["instructing", "transit_to", "on_island", "transit_from", "covering"]
     : ["sailing", "transit_to", "on_island", "prep", "on_banana", "transit_from"];
@@ -80,11 +80,11 @@ function Tooltip({ data }: { data: TooltipData | null }) {
 interface TimelineGridProps {
   times: string[];
   timeline: Record<string, ScheduleCell[]>;
-  kind: "instructor" | "student";
+  kind: "instructor" | "cursist";
   /** Currently selected name (highlights the row + related rows) */
   selected: string | null;
   onSelect: (name: string | null) => void;
-  /** Map of student → instructor at each slot (for cross-highlighting) */
+  /** Map of cursist → instructor at each slot (for cross-highlighting) */
   relatedNames?: Set<string>;
 }
 
@@ -112,7 +112,7 @@ function TimelineGrid({
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
               <th className="sticky left-0 z-10 bg-zinc-50 px-3 py-1.5 text-left font-medium dark:bg-zinc-900">
-                {kind === "instructor" ? "Instructor" : "Student"}
+                {kind === "instructor" ? "Instructor" : "Cursist"}
               </th>
               {times.map((t) => (
                 <th key={t} className="px-1 py-1.5 text-center font-mono font-normal text-zinc-500">
@@ -205,36 +205,36 @@ interface TimelineViewProps {
 
 export default function TimelineView({ result }: TimelineViewProps) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<"instructors" | "students">("instructors");
+  const [view, setView] = useState<"instructors" | "cursists">("instructors");
 
-  // Build cross-reference: when selecting an instructor, highlight their students and vice versa
+  // Build cross-reference: when selecting an instructor, highlight their cursists and vice versa
   const relatedNames = useMemo(() => {
     if (!selected) return new Set<string>();
 
     const related = new Set<string>();
 
     if (selected in result.instructor_timeline) {
-      // Selected an instructor → find students supervised by them
-      for (const [studentName, cells] of Object.entries(result.student_timeline)) {
+      // Selected an instructor → find cursists supervised by them
+      for (const [cursistName, cells] of Object.entries(result.cursist_timeline)) {
         if (cells.some((c) => c.detail === selected)) {
-          related.add(studentName);
+          related.add(cursistName);
         }
       }
       // Also check rides for transport
       for (const ride of result.rides) {
         if (ride.transport_instructors.includes(selected)) {
-          ride.students.forEach((s) => related.add(s));
+          ride.cursists.forEach((s) => related.add(s));
         }
       }
-    } else if (selected in result.student_timeline) {
-      // Selected a student → find their instructors
-      const cells = result.student_timeline[selected];
+    } else if (selected in result.cursist_timeline) {
+      // Selected a cursist → find their instructors
+      const cells = result.cursist_timeline[selected];
       for (const c of cells) {
         if (c.detail) related.add(c.detail);
       }
       // Also check rides
       for (const ride of result.rides) {
-        if (ride.students.includes(selected)) {
+        if (ride.cursists.includes(selected)) {
           ride.transport_instructors.forEach((i) => related.add(i));
         }
       }
@@ -245,7 +245,7 @@ export default function TimelineView({ result }: TimelineViewProps) {
 
   const tabs = [
     { id: "instructors" as const, label: "Instructors" },
-    { id: "students" as const, label: "Students" },
+    { id: "cursists" as const, label: "Cursists" },
   ];
 
   return (
@@ -288,8 +288,8 @@ export default function TimelineView({ result }: TimelineViewProps) {
       ) : (
         <TimelineGrid
           times={result.times}
-          timeline={result.student_timeline}
-          kind="student"
+          timeline={result.cursist_timeline}
+          kind="cursist"
           selected={selected}
           onSelect={setSelected}
           relatedNames={relatedNames}

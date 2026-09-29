@@ -27,6 +27,7 @@ export default function RoosterPage() {
 
 function RoosterInner() {
   const {
+    weekId,
     config,
     setConfig,
     error,
@@ -42,6 +43,14 @@ function RoosterInner() {
   const [presetKey, setPresetKey] = useState(DEFAULT_PRESET_KEY);
 
   const canSolve = people.length > 0 && tasks.length > 0;
+
+  if (weekId === null) {
+    return (
+      <div className="rounded-lg border border-zinc-200 p-8 text-center text-zinc-500 dark:border-zinc-800">
+        Selecteer of maak eerst een week aan (rechtsboven).
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

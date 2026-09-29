@@ -1,4 +1,5 @@
-export interface StudentInput {
+export interface CursistInput {
+  id?: number | null;
   name: string;
   discipline: string;
   instructor: string;
@@ -9,6 +10,7 @@ export interface StudentInput {
 }
 
 export interface InstructorInput {
+  id?: number | null;
   name: string;
   discipline: string;
   cwo: number;
@@ -29,10 +31,10 @@ export interface ConfigInput {
 export interface RideOutput {
   slot: number;
   time: string;
-  students: string[];
+  cursists: string[];
   count: number;
   transport_instructors: string[];
-  student_transport: Record<string, string>;
+  cursist_transport: Record<string, string>;
 }
 
 export interface ScheduleCell {
@@ -43,10 +45,10 @@ export interface ScheduleCell {
 export interface BanaanResponse {
   rides: RideOutput[];
   total_rides: number;
-  total_banana_students: number;
+  total_banana_cursists: number;
   times: string[];
   instructor_timeline: Record<string, ScheduleCell[]>;
-  student_timeline: Record<string, ScheduleCell[]>;
+  cursist_timeline: Record<string, ScheduleCell[]>;
 }
 
 export type Step = "upload" | "preview" | "result";

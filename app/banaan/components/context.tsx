@@ -1,35 +1,45 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type {
-  StudentInput,
+  CursistInput,
   InstructorInput,
   ConfigInput,
   BanaanResponse,
   Step,
 } from "../types";
+import { useWeek } from "../../context/weekContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const USE_DEV_RESULT = process.env.NEXT_PUBLIC_DEV_RESULT === "true";
-const STORAGE_KEY = "banaan-state";
-const SCHEMA_VERSION = 2; // bump when PersistedState shape changes
+const STORAGE_PREFIX = "banaan-state";
+const SCHEMA_VERSION = 3; // bump when PersistedState shape changes
 
+// Cursists/instructors live in the week (DB); only tool-local state is persisted.
 interface PersistedState {
   _v?: number;
-  students: StudentInput[] | null;
-  instructors: InstructorInput[] | null;
   config: ConfigInput | null;
   result: BanaanResponse | null;
-  step: Step;
 }
 
-function loadPersistedState(): PersistedState | null {
+function storageKey(weekId: number) {
+  return `${STORAGE_PREFIX}-${weekId}`;
+}
+
+function loadPersistedState(weekId: number): PersistedState | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(storageKey(weekId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as PersistedState;
     if (parsed._v !== SCHEMA_VERSION) {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(storageKey(weekId));
       return null;
     }
     return parsed;
@@ -38,18 +48,24 @@ function loadPersistedState(): PersistedState | null {
   }
 }
 
-function savePersistedState(state: PersistedState) {
+function savePersistedState(weekId: number, state: PersistedState) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, _v: SCHEMA_VERSION }));
+    localStorage.setItem(
+      storageKey(weekId),
+      JSON.stringify({ ...state, _v: SCHEMA_VERSION }),
+    );
   } catch {
     // storage full or unavailable — ignore
   }
 }
 
-interface DevFixture {
-  students: StudentInput[];
+interface WeekInputs {
+  cursists: CursistInput[];
   instructors: InstructorInput[];
   config: ConfigInput;
+}
+
+interface DevFixture extends WeekInputs {
   result: BanaanResponse;
 }
 
@@ -64,8 +80,15 @@ export interface SolveProgress {
   solutions_found: number;
 }
 
+// Fields of a cursist that the banaan tool may write back to the week.
+export type CursistPatch = Partial<
+  Pick<CursistInput, "discipline" | "instructor" | "wants_banana" | "cwo" | "age" | "friends">
+>;
+export type InstructorPatch = Partial<Omit<InstructorInput, "id">>;
+
 interface BanaanContextValue {
-  students: StudentInput[] | null;
+  weekId: number | null;
+  cursists: CursistInput[] | null;
   instructors: InstructorInput[] | null;
   config: ConfigInput | null;
   result: BanaanResponse | null;
@@ -75,11 +98,12 @@ interface BanaanContextValue {
   progressHistory: SolveProgress[];
   timeout: number;
   step: Step;
-  setStudents: React.Dispatch<React.SetStateAction<StudentInput[] | null>>;
-  setInstructors: React.Dispatch<React.SetStateAction<InstructorInput[] | null>>;
   setConfig: React.Dispatch<React.SetStateAction<ConfigInput | null>>;
   setTimeout: React.Dispatch<React.SetStateAction<number>>;
-  handleUpload: (students: File, instructors?: File) => Promise<void>;
+  updateCursist: (index: number, patch: CursistPatch) => Promise<void>;
+  updateInstructor: (index: number, patch: InstructorPatch) => Promise<void>;
+  refreshInputs: () => Promise<void>;
+  handleUpload: (cursists: File, instructors?: File) => Promise<void>;
   handleSolve: () => Promise<void>;
   handleDownload: () => Promise<void>;
   handleSaveDevResult: () => void;
@@ -90,23 +114,84 @@ interface BanaanContextValue {
 const BanaanContext = createContext<BanaanContextValue | null>(null);
 
 export function BanaanProvider({ children }: { children: React.ReactNode }) {
-  const persisted = useRef(loadPersistedState());
-  const [students, setStudents] = useState<StudentInput[] | null>(persisted.current?.students ?? null);
-  const [instructors, setInstructors] = useState<InstructorInput[] | null>(persisted.current?.instructors ?? null);
-  const [config, setConfig] = useState<ConfigInput | null>(persisted.current?.config ?? null);
-  const [result, setResult] = useState<BanaanResponse | null>(persisted.current?.result ?? null);
+  const { activeWeekId: weekId } = useWeek();
+  const [cursists, setCursists] = useState<CursistInput[] | null>(null);
+  const [instructors, setInstructors] = useState<InstructorInput[] | null>(null);
+  const [config, setConfig] = useState<ConfigInput | null>(null);
+  const [result, setResult] = useState<BanaanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<Step>(persisted.current?.step ?? "upload");
+  const [step, setStep] = useState<Step>("upload");
   const [progress, setProgress] = useState<SolveProgress | null>(null);
   const [progressHistory, setProgressHistory] = useState<SolveProgress[]>([]);
   const [timeout, setSolveTimeout] = useState(600);
   const solveIdRef = useRef<string | null>(null);
+  const defaultConfigRef = useRef<ConfigInput | null>(null);
+  // Week whose persisted state has been restored; guards against saving during load.
+  const loadedWeekRef = useRef<number | null>(null);
 
-  // Persist state to localStorage on change
+  const fetchWeekInputs = useCallback(async (id: number): Promise<WeekInputs> => {
+    const res = await fetch(`${API_URL}/banaan/week/${id}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new Error(body?.detail ?? `Kon weekgegevens niet laden (${res.status})`);
+    }
+    return (await res.json()) as WeekInputs;
+  }, []);
+
+  // (Re)load week data whenever the active week changes.
   useEffect(() => {
-    savePersistedState({ students, instructors, config, result, step });
-  }, [students, instructors, config, result, step]);
+    loadedWeekRef.current = null;
+    setError(null);
+    setResult(null);
+    setProgress(null);
+    setProgressHistory([]);
+
+    if (weekId === null) {
+      setCursists(null);
+      setInstructors(null);
+      setConfig(null);
+      setStep("upload");
+      return;
+    }
+
+    let cancelled = false;
+    setLoading(true);
+    fetchWeekInputs(weekId)
+      .then((data) => {
+        if (cancelled) return;
+        const persisted = loadPersistedState(weekId);
+        defaultConfigRef.current = data.config;
+        setCursists(data.cursists);
+        setInstructors(data.instructors);
+        setConfig(persisted?.config ?? data.config);
+        setResult(persisted?.result ?? null);
+        setStep(
+          data.cursists.length === 0
+            ? "upload"
+            : persisted?.result
+              ? "result"
+              : "preview",
+        );
+        loadedWeekRef.current = weekId;
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Kon weekgegevens niet laden");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [weekId, fetchWeekInputs]);
+
+  // Persist tool-local state per week.
+  useEffect(() => {
+    if (weekId === null || loadedWeekRef.current !== weekId) return;
+    savePersistedState(weekId, { config, result });
+  }, [weekId, config, result]);
 
   // Load dev fixture when NEXT_PUBLIC_DEV_RESULT is set
   useEffect(() => {
@@ -117,7 +202,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         return res.json();
       })
       .then((data: DevFixture) => {
-        setStudents(data.students);
+        setCursists(data.cursists);
         setInstructors(data.instructors);
         setConfig(data.config);
         setResult(data.result);
@@ -128,15 +213,67 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
       });
   }, []);
 
-  async function handleUpload(studentsFile: File, instructorsFile?: File) {
+  async function refreshInputs() {
+    if (weekId === null) return;
+    setError(null);
+    try {
+      const data = await fetchWeekInputs(weekId);
+      setCursists(data.cursists);
+      setInstructors(data.instructors);
+      if (step === "upload" && data.cursists.length > 0) setStep("preview");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Kon weekgegevens niet laden");
+    }
+  }
+
+  async function updateCursist(index: number, patch: CursistPatch) {
+    const id = cursists?.[index]?.id;
+    setCursists((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+    if (weekId === null || id == null) return;
+    // DB stores friends as a list; the tool uses null for "none".
+    const { friends, ...rest } = patch;
+    const body = friends === undefined ? rest : { ...rest, friends: friends ?? [] };
+    const res = await fetch(`${API_URL}/weeks/${weekId}/cursists/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) setError(`Kon cursist niet opslaan (${res.status})`);
+  }
+
+  async function updateInstructor(index: number, patch: InstructorPatch) {
+    const id = instructors?.[index]?.id;
+    setInstructors((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+    if (weekId === null || id == null) return;
+    const res = await fetch(`${API_URL}/weeks/${weekId}/staff/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) setError(`Kon staflid niet opslaan (${res.status})`);
+  }
+
+  async function handleUpload(cursistsFile: File, instructorsFile?: File) {
+    if (weekId === null) return;
     setError(null);
     setLoading(true);
 
     const form = new FormData();
-    form.append("file", studentsFile);
+    form.append("file", cursistsFile);
     if (instructorsFile) {
       form.append("instructors_file", instructorsFile);
     }
+    form.append("week_id", String(weekId));
 
     try {
       const res = await fetch(`${API_URL}/banaan/upload`, {
@@ -147,10 +284,11 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.detail ?? `Upload failed (${res.status})`);
       }
-      const data = await res.json();
-      setStudents(data.students);
+      const data = (await res.json()) as WeekInputs;
+      defaultConfigRef.current = data.config;
+      setCursists(data.cursists);
       setInstructors(data.instructors);
-      setConfig(data.config);
+      setConfig((prev) => prev ?? data.config);
       setResult(null);
       setStep("preview");
     } catch (err: unknown) {
@@ -161,7 +299,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function handleSolve() {
-    if (!students || !instructors || !config) return;
+    if (!cursists || !instructors || !config) return;
     setError(null);
     setLoading(true);
     setProgress(null);
@@ -172,7 +310,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_URL}/banaan/solve-stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ students, instructors, config, timeout }),
+        body: JSON.stringify({ cursists, instructors, config, timeout }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -235,7 +373,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function handleDownload() {
-    if (!students || !instructors || !config) return;
+    if (!cursists || !instructors || !config) return;
     setError(null);
     setLoading(true);
 
@@ -243,7 +381,7 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_URL}/banaan/download`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ students, instructors, config, timeout }),
+        body: JSON.stringify({ cursists, instructors, config, timeout }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -263,21 +401,22 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Clears the result and config; the week's cursists/instructors are untouched.
   function reset() {
-    setStudents(null);
-    setInstructors(null);
-    setConfig(null);
+    setConfig(defaultConfigRef.current);
     setResult(null);
     setError(null);
     setProgress(null);
     setProgressHistory([]);
-    setStep("upload");
-    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setStep(cursists && cursists.length > 0 ? "preview" : "upload");
+    if (weekId !== null) {
+      try { localStorage.removeItem(storageKey(weekId)); } catch {}
+    }
   }
 
   function handleSaveDevResult() {
-    if (!students || !instructors || !config || !result) return;
-    const fixture: DevFixture = { students, instructors, config, result };
+    if (!cursists || !instructors || !config || !result) return;
+    const fixture: DevFixture = { cursists, instructors, config, result };
     const blob = new Blob([JSON.stringify(fixture, null, 2)], {
       type: "application/json",
     });
@@ -292,7 +431,8 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
   return (
     <BanaanContext.Provider
       value={{
-        students,
+        weekId,
+        cursists,
         instructors,
         config,
         result,
@@ -302,10 +442,11 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         progressHistory,
         timeout,
         step,
-        setStudents,
-        setInstructors,
         setConfig,
         setTimeout: setSolveTimeout,
+        updateCursist,
+        updateInstructor,
+        refreshInputs,
         handleUpload,
         handleSolve,
         handleDownload,
