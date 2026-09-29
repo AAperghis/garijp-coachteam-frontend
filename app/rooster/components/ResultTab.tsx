@@ -132,6 +132,8 @@ export default function ResultTab() {
               ["repeat_penalty", "Straf voor het herhalen van dezelfde taak"],
               ["no_repeat_penalty", "Extra straf voor het herhalen van taken die liever maar 1 keer gedaan worden (Zie lijst beneden)"],
               ["balance_penalty", "Straf voor ongelijke taakverdeling over staf)"],
+              ["mixed_sex_penalty", "Straf voor gemengd M/V op dezelfde taak (zie lijst beneden)"],
+              ["same_discipline_penalty", "Straf per extra persoon uit dezelfde discipline op een taak (zie lijst beneden)"],
             ] as const).map(([key, label]) => (
               <label key={key} className="flex flex-col gap-1 text-sm">
                 <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
@@ -146,24 +148,28 @@ export default function ResultTab() {
                 />
               </label>
             ))}
-            <label className="flex flex-col gap-1 text-sm sm:col-span-2">
-              <span className="text-zinc-500 dark:text-zinc-400">
-                Taken die liever maar een keer gedaan worden (kommagescheiden IDs)
-              </span>
-              <input
-                type="text"
-                value={sc.no_repeat_tasks.join(", ")}
-                onChange={(e) =>
-                  updateSolverConfig({
-                    no_repeat_tasks: e.target.value
-                      .split(",")
-                      .map((s) => s.trim())
-                      .filter(Boolean),
-                  })
-                }
-                className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
-              />
-            </label>
+            {([
+              ["no_repeat_tasks", "Taken die liever maar een keer gedaan worden (kommagescheiden IDs)"],
+              ["same_sex_tasks", "Taken die liever niet gemengd M/V zijn (kommagescheiden IDs)"],
+              ["spread_discipline_tasks", "Taken die liever over disciplines verdeeld worden (kommagescheiden IDs)"],
+            ] as const).map(([key, label]) => (
+              <label key={key} className="flex flex-col gap-1 text-sm sm:col-span-2">
+                <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
+                <input
+                  type="text"
+                  value={(sc[key] ?? []).join(", ")}
+                  onChange={(e) =>
+                    updateSolverConfig({
+                      [key]: e.target.value
+                        .split(",")
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+                />
+              </label>
+            ))}
           </div>
           <button
             onClick={restoreSolverDefaults}

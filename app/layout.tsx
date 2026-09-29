@@ -7,6 +7,7 @@ import { ThemeButton } from "./components/themeButton";
 import { ThemeProvider } from "./context/themeContext";
 import { AwakeProvider } from "./context/wakeupContext";
 import { WeekProvider } from "./context/weekContext";
+import { DisciplineProvider } from "./context/disciplineContext";
 import { WeekSelector } from "./components/WeekSelector";
 import { ConnectingScreen } from "./components/loadingScreen";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <AwakeProvider>
             <WeekProvider>
+            <DisciplineProvider>
             <nav className="border-b border-garijp-red bg-garijp-blue w-full">
 
             <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-4 sm:gap-6 sm:px-6">
@@ -71,6 +73,7 @@ export default function RootLayout({
           </nav>
           <ConnectingScreen/>
           <main className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6">{children}</main>
+            </DisciplineProvider>
             </WeekProvider>
           </AwakeProvider>
         </ThemeProvider>

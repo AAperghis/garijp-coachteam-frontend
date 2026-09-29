@@ -80,11 +80,8 @@ export interface SolveProgress {
   solutions_found: number;
 }
 
-// Fields of a cursist that the banaan tool may write back to the week.
-export type CursistPatch = Partial<
-  Pick<CursistInput, "discipline" | "instructor" | "wants_banana" | "cwo" | "age" | "friends">
->;
-export type InstructorPatch = Partial<Omit<InstructorInput, "id">>;
+// The only cursist fields the banaan tool writes back; everything else is managed on the Cursisten page.
+export type CursistPatch = Partial<Pick<CursistInput, "wants_banana" | "friends">>;
 
 interface BanaanContextValue {
   weekId: number | null;
@@ -101,7 +98,6 @@ interface BanaanContextValue {
   setConfig: React.Dispatch<React.SetStateAction<ConfigInput | null>>;
   setTimeout: React.Dispatch<React.SetStateAction<number>>;
   updateCursist: (index: number, patch: CursistPatch) => Promise<void>;
-  updateInstructor: (index: number, patch: InstructorPatch) => Promise<void>;
   refreshInputs: () => Promise<void>;
   handleUpload: (cursists: File, instructors?: File) => Promise<void>;
   handleSolve: () => Promise<void>;
@@ -244,23 +240,6 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
       body: JSON.stringify(body),
     });
     if (!res.ok) setError(`Kon cursist niet opslaan (${res.status})`);
-  }
-
-  async function updateInstructor(index: number, patch: InstructorPatch) {
-    const id = instructors?.[index]?.id;
-    setInstructors((prev) => {
-      if (!prev) return prev;
-      const next = [...prev];
-      next[index] = { ...next[index], ...patch };
-      return next;
-    });
-    if (weekId === null || id == null) return;
-    const res = await fetch(`${API_URL}/weeks/${weekId}/staff/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    });
-    if (!res.ok) setError(`Kon staflid niet opslaan (${res.status})`);
   }
 
   async function handleUpload(cursistsFile: File, instructorsFile?: File) {
@@ -445,7 +424,6 @@ export function BanaanProvider({ children }: { children: React.ReactNode }) {
         setConfig,
         setTimeout: setSolveTimeout,
         updateCursist,
-        updateInstructor,
         refreshInputs,
         handleUpload,
         handleSolve,

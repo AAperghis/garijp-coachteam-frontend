@@ -1,35 +1,63 @@
 "use client";
 
-import Link from "next/link";
 import { useBanaan } from "./context";
 import SearchableSelect from "./SearchableSelect";
-import { useDisciplines } from "../../context/disciplineContext";
-import type { ConfigInput } from "../types";
+import { DISCIPLINES } from "../disciplines";
+import type { StudentInput as StudentType, InstructorInput, ConfigInput } from "../types";
 import { useState } from "react";
 import TabBar from "../../components/TabBar";
 
+const cellClass =
+  "w-full bg-transparent px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-garijp-blue";
+
 const inputTabs = [
-  { id: "cursists", label: "Cursists" },
+  { id: "students", label: "Students" },
   { id: "instructors", label: "Instructors" },
   { id: "config", label: "Config" },
 ] as const;
 
-export default function CursistInputStep() {
+export default function StudentInputStep() {
   const {
     step,
-    cursists,
+    students,
     instructors,
     config,
     timeout,
-    updateCursist,
+    setStudents,
+    setInstructors,
     setConfig,
     setTimeout,
   } = useBanaan();
-  const { labelOf } = useDisciplines();
-  const [currentView, setCurrentView] = useState<"cursists" | "instructors" | "config">("cursists");
+  const [currentView, setCurrentView] = useState<"students" | "instructors" | "config">("students");
 
-  if ((step !== "preview" && step !== "result") || !cursists || !instructors || !config)
+  if ((step !== "preview" && step !== "result") || !students || !instructors || !config)
     return null;
+
+  function updateStudent<K extends keyof StudentType>(
+    index: number,
+    key: K,
+    value: StudentType[K],
+  ) {
+    setStudents((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+  }
+
+  function updateInstructor<K extends keyof InstructorInput>(
+    index: number,
+    key: K,
+    value: InstructorInput[K],
+  ) {
+    setInstructors((prev) => {
+      if (!prev) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], [key]: value };
+      return next;
+    });
+  }
 
   function updateConfig<K extends keyof ConfigInput>(key: K, value: ConfigInput[K]) {
     setConfig((prev) => {
@@ -38,21 +66,18 @@ export default function CursistInputStep() {
     });
   }
 
-  const cursistNames = cursists.map((s) => s.name);
+  const studentNames = students.map((s) => s.name);
+  const instructorNames = instructors.map((inst) => inst.name);
+  const disciplineOptions = [...DISCIPLINES];
 
   return (
     <div className="flex flex-col gap-6">
       <TabBar tab={currentView} setTab={setCurrentView} tabs={inputTabs} />
 
-      <section className={currentView !== "cursists" ? "hidden" : ""}>
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">
-            Cursists ({cursists.length})
-          </h2>
-          <Link href="/cursisten" className="text-xs text-zinc-500 hover:underline">
-            Naam, discipline of instructeur wijzigen → Cursisten
-          </Link>
-        </div>
+      <section className={currentView !== "students" ? "hidden" : ""}>
+        <h2 className="mb-2 text-lg font-semibold">
+          Students ({students.length})
+        </h2>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -65,27 +90,45 @@ export default function CursistInputStep() {
               </tr>
             </thead>
             <tbody>
-              {cursists.map((s, i) => (
+              {students.map((s, i) => (
                 <tr
-                  key={s.id ?? i}
+                  key={i}
                   className="border-b border-zinc-100 dark:border-zinc-800"
                 >
-                  <td className="px-4 py-2">{s.name}</td>
-                  <td className="px-4 py-2 text-zinc-500">{s.discipline ? labelOf(s.discipline) : "—"}</td>
-                  <td className="px-4 py-2 text-zinc-500">{s.instructor || "—"}</td>
+                  <td>
+                    <input
+                      className={cellClass}
+                      value={s.name}
+                      onChange={(e) => updateStudent(i, "name", e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <SearchableSelect
+                      value={s.discipline}
+                      options={disciplineOptions}
+                      onChange={(v) => updateStudent(i, "discipline", v)}
+                    />
+                  </td>
+                  <td>
+                    <SearchableSelect
+                      value={s.instructor}
+                      options={instructorNames}
+                      onChange={(v) => updateStudent(i, "instructor", v)}
+                    />
+                  </td>
                   <td className="px-2">
                     <input
                       type="checkbox"
                       checked={s.wants_banana}
-                      onChange={(e) => updateCursist(i, { wants_banana: e.target.checked })}
+                      onChange={(e) => updateStudent(i, "wants_banana", e.target.checked)}
                       className="h-4 w-4 accent-garijp-blue"
                     />
                   </td>
                   <td>
                     <SearchableSelect
                       value={s.friends?.[0] ?? ""}
-                      options={cursistNames.filter((n) => n !== s.name)}
-                      onChange={(v) => updateCursist(i, { friends: v ? [v] : null })}
+                      options={studentNames.filter((n) => n !== s.name)}
+                      onChange={(v) => updateStudent(i, "friends", v ? [v] : null)}
                       placeholder="—"
                       allowEmpty
                     />
@@ -98,34 +141,48 @@ export default function CursistInputStep() {
       </section>
 
       <section className={currentView !== "instructors" ? "hidden" : ""}>
-        <div className="mb-2 flex items-baseline justify-between">
-          <h2 className="text-lg font-semibold">
-            Instructors ({instructors.length})
-          </h2>
-          <Link href="/staff" className="text-xs text-zinc-500 hover:underline">
-            Stafleden of disciplines wijzigen → Staff
-          </Link>
-        </div>
+        <h2 className="mb-2 text-lg font-semibold">
+          Instructors ({instructors.length})
+        </h2>
         <div className="overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-800">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
               <tr>
                 <th className="px-4 py-2">Name</th>
                 <th className="px-4 py-2">Discipline</th>
-                <th className="px-4 py-2" title="Volgt uit de discipline (disciplines.json)">Transport</th>
-                <th className="px-4 py-2" title="Volgt uit de discipline (disciplines.json)">Cover</th>
+                <th className="px-4 py-2">Transport Capacity</th>
               </tr>
             </thead>
             <tbody>
               {instructors.map((inst, i) => (
                 <tr
-                  key={inst.id ?? i}
+                  key={i}
                   className="border-b border-zinc-100 dark:border-zinc-800"
                 >
-                  <td className="px-4 py-2">{inst.name}</td>
-                  <td className="px-4 py-2 text-zinc-500">{inst.discipline ? labelOf(inst.discipline) : "—"}</td>
-                  <td className="px-4 py-2 text-zinc-500">{inst.transport_capacity}</td>
-                  <td className="px-4 py-2 text-zinc-500">{inst.cover_capacity}</td>
+                  <td>
+                    <input
+                      className={cellClass}
+                      value={inst.name}
+                      onChange={(e) => updateInstructor(i, "name", e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <SearchableSelect
+                      value={inst.discipline}
+                      options={disciplineOptions}
+                      onChange={(v) => updateInstructor(i, "discipline", v)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="number"
+                      className={cellClass}
+                      value={inst.transport_capacity}
+                      onChange={(e) =>
+                        updateInstructor(i, "transport_capacity", Number(e.target.value))
+                      }
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>

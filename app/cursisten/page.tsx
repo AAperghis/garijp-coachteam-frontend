@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useWeek } from "../context/weekContext";
+import { useDisciplines } from "../context/disciplineContext";
+import DisciplineSelect from "../components/DisciplineSelect";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -18,29 +20,51 @@ interface Cursist {
   friends: string[];
 }
 
+interface StaffMember {
+  id: number;
+  name: string;
+  discipline: string;
+  active: boolean;
+}
+
 export default function CursistenPage() {
   const { activeWeekId, activeWeek } = useWeek();
+  const { groupOf } = useDisciplines();
   const [rows, setRows] = useState<Cursist[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (activeWeekId === null) {
       setRows([]);
+      setStaff([]);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_URL}/weeks/${activeWeekId}/cursists`);
-      if (!res.ok) throw new Error(`Kon cursisten niet laden (${res.status})`);
-      setRows((await res.json()) as Cursist[]);
+      const [cursistsRes, staffRes] = await Promise.all([
+        fetch(`${API_URL}/weeks/${activeWeekId}/cursists`),
+        fetch(`${API_URL}/weeks/${activeWeekId}/staff`),
+      ]);
+      if (!cursistsRes.ok) throw new Error(`Kon cursisten niet laden (${cursistsRes.status})`);
+      if (!staffRes.ok) throw new Error(`Kon staf niet laden (${staffRes.status})`);
+      setRows((await cursistsRes.json()) as Cursist[]);
+      setStaff((await staffRes.json()) as StaffMember[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Kon cursisten niet laden");
     } finally {
       setLoading(false);
     }
   }, [activeWeekId]);
+
+  // Active staff whose simplified group matches the cursist's (e.g. opti + laerling both -> jz).
+  function instructorsFor(discipline: string): StaffMember[] {
+    if (!discipline) return staff.filter((s) => s.active);
+    const group = groupOf(discipline);
+    return staff.filter((s) => s.active && groupOf(s.discipline) === group);
+  }
 
   useEffect(() => {
     void load();
@@ -187,17 +211,10 @@ export default function CursistenPage() {
                   />
                 </td>
                 <td className="px-2 py-1.5">
-                  <input
-                    type="text"
+                  <DisciplineSelect
                     value={r.discipline}
-                    onChange={(e) =>
-                      setLocal(r.id, { discipline: e.target.value })
-                    }
-                    onBlur={(e) =>
-                      persist(r.id, { discipline: e.target.value })
-                    }
-                    placeholder="bv. jz"
-                    className="w-24 rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
+                    onChange={(v) => persist(r.id, { discipline: v })}
+                    forCursists
                   />
                 </td>
                 <td className="px-2 py-1.5 text-center">
@@ -212,18 +229,29 @@ export default function CursistenPage() {
                   />
                 </td>
                 <td className="px-2 py-1.5">
-                  <input
-                    type="text"
-                    value={r.instructor}
-                    onChange={(e) =>
-                      setLocal(r.id, { instructor: e.target.value })
-                    }
-                    onBlur={(e) =>
-                      persist(r.id, { instructor: e.target.value })
-                    }
-                    placeholder="Naam"
-                    className={textInput}
-                  />
+                  {(() => {
+                    const options = instructorsFor(r.discipline);
+                    // Keep a stale/foreign name selectable so it isn't silently dropped.
+                    const unknown =
+                      r.instructor && !options.some((s) => s.name === r.instructor);
+                    return (
+                      <select
+                        value={r.instructor}
+                        onChange={(e) => persist(r.id, { instructor: e.target.value })}
+                        className={textInput}
+                      >
+                        <option value="">—</option>
+                        {unknown && (
+                          <option value={r.instructor}>{r.instructor} (?)</option>
+                        )}
+                        {options.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  })()}
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <input

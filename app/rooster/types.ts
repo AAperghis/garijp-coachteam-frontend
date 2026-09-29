@@ -3,6 +3,8 @@ export interface PersonInput {
   name: string;
   task_weights: Record<string, number>;
   editable?: boolean;
+  sex?: string; // "M" | "F" | ""
+  discipline?: string; // detailed key; backend collapses to its group
 }
 
 export interface TaskInput {
@@ -19,6 +21,10 @@ export interface SolverConfig {
   no_repeat_penalty: number;
   balance_penalty: number;
   no_repeat_tasks: string[];
+  mixed_sex_penalty: number;
+  same_sex_tasks: string[];
+  same_discipline_penalty: number;
+  spread_discipline_tasks: string[];
 }
 
 export interface RosterConfig {

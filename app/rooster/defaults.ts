@@ -19,6 +19,7 @@ export const DEFAULT_TASKS: TaskInput[] = [
   { id: "theorie_beginner", name: "Theorie Beginner", preferred_people: 1, min_people: 1 },
   { id: "theorie_gevorderd", name: "Theorie Gevorderd", preferred_people: 1, min_people: 1 },
   { id: "avond_programma", name: "Avond programma", preferred_people: 2, min_people: 2 },
+  { id: "voetbal", name: "Voetbal", preferred_people: 1, min_people: 1 },
 ];
 
 export const DEFAULT_CONFIG_ZOMER: RosterConfig = {
@@ -28,6 +29,7 @@ export const DEFAULT_CONFIG_ZOMER: RosterConfig = {
     ["theorie_beginner", "theorie_gevorderd"],
     ["corvee", "avond_programma"],
     ["corvee", "water"],
+    ["voetbal", "bar"]
   ],
   max_task_assignments: {},
   pre_assignments: [],

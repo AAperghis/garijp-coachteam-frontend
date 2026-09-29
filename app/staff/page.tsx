@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useWeek } from "../context/weekContext";
+import { useDisciplines } from "../context/disciplineContext";
+import DisciplineSelect from "../components/DisciplineSelect";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -12,13 +14,12 @@ interface StaffMember {
   sex: string;
   discipline: string;
   cwo: number;
-  transport_capacity: number;
-  cover_capacity: number;
   active: boolean;
 }
 
 export default function StaffPage() {
   const { activeWeekId, activeWeek, weeks } = useWeek();
+  const { capacitiesOf } = useDisciplines();
   const [rows, setRows] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,8 +163,9 @@ export default function StaffPage() {
               <th className="px-2 py-2">Geslacht</th>
               <th className="px-2 py-2">Discipline</th>
               <th className="px-2 py-2 text-center">CWO voorkeur</th>
-              <th className="px-2 py-2 text-center">Transport</th>
-              <th className="px-2 py-2 text-center">Cover</th>
+              <th className="px-2 py-2 text-center" title="Transport / cover capaciteit volgt uit de discipline (disciplines.json)">
+                Transport / Cover
+              </th>
               <th className="px-2 py-2 text-center">Actief</th>
               <th className="w-12 px-2 py-2" />
             </tr>
@@ -171,7 +173,7 @@ export default function StaffPage() {
           <tbody>
             {rows.length === 0 && !loading && (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-zinc-400">
+                <td colSpan={7} className="px-4 py-6 text-center text-zinc-400">
                   Nog geen stafleden. Voeg er een toe of kopieer uit een andere
                   week.
                 </td>
@@ -204,21 +206,11 @@ export default function StaffPage() {
                   </select>
                 </td>
                 <td className="px-2 py-1.5">
-                  <select
+                  <DisciplineSelect
                     value={r.discipline}
-                    onChange={(e) => persist(r.id, { discipline: e.target.value })}
-                    className="rounded border border-zinc-200 bg-transparent px-2 py-1 text-sm dark:border-zinc-700"
-                  >
-                    <option value="wal">—</option>
-                    <option value="opti">Optimist</option>
-                    <option value="laerling">Laerling</option>
-                    <option value="valk">Valk</option>
-                    <option value="tirion">Tirion</option>
-                    <option value="zb">Zwaardboot</option>
-                    <option value="cat">Catamaran</option>
-                    <option value="surf">Windsurf</option>
-                    <option value="wingfoil">Wingfoil</option>
-                  </select>
+                    onChange={(v) => persist(r.id, { discipline: v })}
+                    forStaff
+                  />
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <input
@@ -233,37 +225,11 @@ export default function StaffPage() {
                     className={numInput}
                   />
                 </td>
-                <td className="px-2 py-1.5 text-center">
-                  <input
-                    type="number"
-                    value={r.transport_capacity}
-                    onChange={(e) =>
-                      setLocal(r.id, {
-                        transport_capacity: Number(e.target.value),
-                      })
-                    }
-                    onBlur={(e) =>
-                      persist(r.id, {
-                        transport_capacity: Number(e.target.value),
-                      })
-                    }
-                    className={numInput}
-                  />
-                </td>
-                <td className="px-2 py-1.5 text-center">
-                  <input
-                    type="number"
-                    value={r.cover_capacity}
-                    onChange={(e) =>
-                      setLocal(r.id, {
-                        cover_capacity: Number(e.target.value),
-                      })
-                    }
-                    onBlur={(e) =>
-                      persist(r.id, { cover_capacity: Number(e.target.value) })
-                    }
-                    className={numInput}
-                  />
+                <td className="px-2 py-1.5 text-center text-zinc-500">
+                  {(() => {
+                    const cap = capacitiesOf(r.discipline);
+                    return cap ? `${cap.transport} / ${cap.cover}` : "—";
+                  })()}
                 </td>
                 <td className="px-2 py-1.5 text-center">
                   <input

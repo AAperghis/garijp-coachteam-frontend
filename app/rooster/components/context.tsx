@@ -16,12 +16,13 @@ import type {
   Schedule,
   Step,
 } from "../types";
-import { DEFAULT_TASKS, DEFAULT_CONFIG_ZOMER, FIXED_PEOPLE } from "../defaults";
+import { DEFAULT_TASKS, DEFAULT_CONFIG_ZOMER, FIXED_PEOPLE, WAL_ALLOWED_TASKS } from "../defaults";
 import { useWeek } from "../../context/weekContext";
+import { useDisciplines } from "../../context/disciplineContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 const STORAGE_PREFIX = "rooster-state";
-const SCHEMA_VERSION = 6;
+const SCHEMA_VERSION = 7;
 
 // Roster person ids for week staff are prefixed so they can't clash with FIXED_PEOPLE.
 export const STAFF_ID_PREFIX = "staff-";
@@ -29,6 +30,8 @@ export const STAFF_ID_PREFIX = "staff-";
 interface StaffMember {
   id: number;
   name: string;
+  sex: string;
+  discipline: string;
   active: boolean;
 }
 
@@ -40,6 +43,7 @@ interface PersistedState {
   tasks: TaskInput[];
   people: PersonInput[]; // resolved list, for the print page
   taskWeights: TaskWeights;
+  walBlockedIds: string[]; // people whose default Wal blocks were applied (so manual edits stick)
   config: RosterConfig;
   schedule: Schedule | null;
   step: Step;
@@ -87,6 +91,8 @@ interface RosterContextValue {
   step: Step;
   setTasks: React.Dispatch<React.SetStateAction<TaskInput[]>>;
   setConfig: React.Dispatch<React.SetStateAction<RosterConfig>>;
+  /** Replace the config with a preset; Wal default blocks are re-applied on top. */
+  applyPreset: (preset: RosterConfig) => void;
   setTaskWeight: (personId: string, taskId: string, value: number) => void;
   refreshStaff: () => Promise<void>;
   handleSolve: () => Promise<void>;
@@ -99,10 +105,12 @@ const RosterContext = createContext<RosterContextValue | null>(null);
 
 export function RosterProvider({ children }: { children: React.ReactNode }) {
   const { activeWeekId: weekId } = useWeek();
+  const { groupOf } = useDisciplines();
 
   const [tasks, setTasks] = useState<TaskInput[]>([...DEFAULT_TASKS]);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [taskWeights, setTaskWeights] = useState<TaskWeights>({});
+  const [walBlockedIds, setWalBlockedIds] = useState<string[]>([]);
   const [config, setConfig] = useState<RosterConfig>({ ...DEFAULT_CONFIG_ZOMER });
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -118,7 +126,14 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
         .filter((s) => s.active)
         .map((s) => {
           const id = `${STAFF_ID_PREFIX}${s.id}`;
-          return { id, name: s.name, editable: true, task_weights: taskWeights[id] ?? {} };
+          return {
+            id,
+            name: s.name,
+            editable: true,
+            sex: s.sex,
+            discipline: s.discipline,
+            task_weights: taskWeights[id] ?? {},
+          };
         }),
     ],
     [staff, taskWeights],
@@ -142,6 +157,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
     const persisted = loadPersistedState(weekId);
     setTasks(persisted?.tasks ?? [...DEFAULT_TASKS]);
     setTaskWeights(persisted?.taskWeights ?? {});
+    setWalBlockedIds(persisted?.walBlockedIds ?? []);
     setConfig(persisted?.config ?? { ...DEFAULT_CONFIG_ZOMER });
     setSchedule(persisted?.schedule ?? null);
     setStep(persisted?.step ?? "input");
@@ -166,8 +182,31 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (weekId === null || loadedWeekRef.current !== weekId) return;
-    savePersistedState(weekId, { tasks, people, taskWeights, config, schedule, step });
-  }, [weekId, tasks, people, taskWeights, config, schedule, step]);
+    savePersistedState(weekId, { tasks, people, taskWeights, walBlockedIds, config, schedule, step });
+  }, [weekId, tasks, people, taskWeights, walBlockedIds, config, schedule, step]);
+
+  // Newly seen Wal staff get blocked from everything but WAL_ALLOWED_TASKS; applied once per
+  // person so the user can still unblock them in the matrix afterwards.
+  useEffect(() => {
+    if (weekId === null || loadedWeekRef.current !== weekId) return;
+    const fresh = staff.filter(
+      (s) => s.active && groupOf(s.discipline) === "wal" && !walBlockedIds.includes(`${STAFF_ID_PREFIX}${s.id}`),
+    );
+    if (fresh.length === 0) return;
+    const ids = fresh.map((s) => `${STAFF_ID_PREFIX}${s.id}`);
+    setConfig((prev) => {
+      const have = new Set(prev.task_blocks.map(([p, t, d]) => `${p}|${t}|${d}`));
+      const added: [string, string, string][] = [];
+      for (const pid of ids) {
+        for (const t of tasks) {
+          if (WAL_ALLOWED_TASKS.includes(t.id) || have.has(`${pid}|${t.id}|`)) continue;
+          added.push([pid, t.id, ""]);
+        }
+      }
+      return added.length ? { ...prev, task_blocks: [...prev.task_blocks, ...added] } : prev;
+    });
+    setWalBlockedIds((prev) => [...prev, ...ids]);
+  }, [weekId, staff, tasks, walBlockedIds, groupOf]);
 
   async function refreshStaff() {
     if (weekId === null) return;
@@ -177,6 +216,11 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Kon staf niet laden");
     }
+  }
+
+  function applyPreset(preset: RosterConfig) {
+    setWalBlockedIds([]);
+    setConfig({ ...preset });
   }
 
   function setTaskWeight(personId: string, taskId: string, value: number) {
@@ -247,6 +291,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
   function restoreDefaults() {
     setTasks([...DEFAULT_TASKS]);
     setTaskWeights({});
+    setWalBlockedIds([]); // Wal defaults get re-applied on the fresh config
     setConfig({ ...DEFAULT_CONFIG_ZOMER });
     setSchedule(null);
     setStep("input");
@@ -276,6 +321,7 @@ export function RosterProvider({ children }: { children: React.ReactNode }) {
         step,
         setTasks,
         setConfig,
+        applyPreset,
         setTaskWeight,
         refreshStaff,
         handleSolve,

@@ -70,7 +70,7 @@ export default function InstructorsTab() {
                     {person.editable ? (
                       <input
                         type="number"
-                        min={0}
+                        min={-10}
                         max={10}
                         value={person.task_weights[t.id] ?? 0}
                         onChange={(e) =>

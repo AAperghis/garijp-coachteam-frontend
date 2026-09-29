@@ -29,7 +29,7 @@ function RoosterInner() {
   const {
     weekId,
     config,
-    setConfig,
+    applyPreset,
     error,
     loading,
     people,
@@ -66,7 +66,7 @@ function RoosterInner() {
               const preset = ROOSTER_PRESETS[key];
               if (preset) {
                 setPresetKey(key);
-                setConfig({ ...preset });
+                applyPreset(preset);
               }
             }}
             className="rounded-lg border border-zinc-200 bg-transparent px-3 py-2 text-sm dark:border-zinc-700"

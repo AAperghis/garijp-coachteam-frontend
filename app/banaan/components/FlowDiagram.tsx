@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { BanaanResponse } from "../types";
 import { useBanaan } from "./context";
+import { useDisciplines } from "../../context/disciplineContext";
 
 // ── Build instructor→cursists mapping per slot (same logic as HandoffsView) ──
 
@@ -54,13 +55,11 @@ interface Transfer {
 
 // ── Colour palette ──────────────────────────────────────────────────────
 
-// Each discipline has multiple shades so instructors within the same
-// discipline are visually distinct.  The first shade is the "base" used
-// for discipline headers / separators.
+// Keyed by simplified discipline group; each group has multiple shades so
+// instructors within the same group are visually distinct.  The first shade
+// is the "base" used for group headers / separators.
 const DISC_SHADES: Record<string, string[]> = {
   jz:       ["#3b82f6", "#60a5fa", "#2563eb", "#93c5fd"],
-  opti:     ["#06b6d4", "#22d3ee", "#0891b2", "#67e8f9"],
-  laerling: ["#8b5cf6", "#a78bfa", "#7c3aed", "#c4b5fd"],
   zb:       ["#22c55e", "#4ade80", "#16a34a", "#86efac"],
   surf:     ["#f59e0b", "#fbbf24", "#d97706", "#fcd34d"],
   cat:      ["#ef4444", "#f87171", "#dc2626", "#fca5a5"],
@@ -92,19 +91,20 @@ interface FlowDiagramProps {
 
 export default function FlowDiagram({ result }: FlowDiagramProps) {
   const { instructors: instructorInputs } = useBanaan();
+  const { groupOf } = useDisciplines();
   const slots = useMemo(() => buildInstructorGroups(result), [result]);
   const times = result.times;
 
-  // Build name→discipline map from the input data
+  // Build name→discipline group map from the input data
   const instDiscipline = useMemo(() => {
     const map = new Map<string, string>();
     if (instructorInputs) {
       for (const inst of instructorInputs) {
-        map.set(inst.name, inst.discipline.toLowerCase());
+        map.set(inst.name, groupOf(inst.discipline));
       }
     }
     return map;
-  }, [instructorInputs]);
+  }, [instructorInputs, groupOf]);
 
   // Collect all instructor names that appear in the solution
   const allInstructorNames = useMemo(() => {
@@ -127,7 +127,7 @@ export default function FlowDiagram({ result }: FlowDiagramProps) {
     for (const names of discMap.values()) names.sort();
 
     // Discipline display order
-    const discOrder = ["jz", "opti", "laerling", "zb", "surf", "cat", "kb"];
+    const discOrder = ["jz", "zb", "surf", "cat", "kb"];
     const sortedDiscs = Array.from(discMap.keys()).sort((a, b) => {
       const ai = discOrder.indexOf(a);
       const bi = discOrder.indexOf(b);
