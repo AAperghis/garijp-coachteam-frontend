@@ -7,9 +7,14 @@ export const DEFAULT_SOLVER_CONFIG: SolverConfig = {
   no_repeat_penalty: 60,
   balance_penalty: 5,
   no_repeat_tasks: ["nacht_wacht", "corvee"],
+  mixed_sex_penalty: 40,
+  same_sex_tasks: ["nacht_wacht"],
+  same_discipline_penalty: 30,
+  spread_discipline_tasks: ["corvee"],
 };
 
-
+// Staff in the "wal" discipline group are blocked from every task except these by default.
+export const WAL_ALLOWED_TASKS = ["avond_programma"];
 
 export const DEFAULT_TASKS: TaskInput[] = [
   { id: "corvee", name: "Corvee", preferred_people: 3, min_people: 2 },
@@ -34,13 +39,6 @@ export const DEFAULT_CONFIG_ZOMER: RosterConfig = {
   max_task_assignments: {},
   pre_assignments: [],
   task_blocks: [
-    // Entertainment doet alleen avondprogramma
-    ["ent", "corvee", ""],
-    ["ent", "bar", ""],
-    ["ent", "water", ""],
-    ["ent", "nacht_wacht", ""],
-    ["ent", "theorie_beginner", ""],
-    ["ent", "theorie_gevorderd", ""],
     // Eigen Groepjes doet geen taken
     ["eigen", "corvee", ""],
     ["eigen", "bar", ""],
@@ -75,13 +73,6 @@ export const DEFAULT_CONFIG_HEMELVAART: RosterConfig = {
   max_task_assignments: {},
   pre_assignments: [],
   task_blocks: [
-    // Entertainment doet alleen avondprogramma
-    ["ent", "corvee", ""],
-    ["ent", "bar", ""],
-    ["ent", "water", ""],
-    ["ent", "nacht_wacht", ""],
-    ["ent", "theorie_beginner", ""],
-    ["ent", "theorie_gevorderd", ""],
     // Eigen Groepjes doet geen taken
     ["eigen", "corvee", ""],
     ["eigen", "bar", ""],
@@ -112,6 +103,5 @@ export const DEFAULT_PRESET_KEY = "Zomerweek";
 
 // Pseudo-people that are always in the roster; real staff come from the week's staff list.
 export const FIXED_PEOPLE: PersonInput[] = [
-  { id: "ent", name: "Entertainment", editable: false, task_weights: {"avond_programma": 10} },
   { id: "eigen", name: "Eigen Groepjes", editable: false, task_weights: {"theorie_beginner": 10} },
 ];

@@ -1,5 +1,6 @@
 import localFont from "next/font/local";
 import "../../globals.css";
+import { DisciplineProvider } from "../../context/disciplineContext";
 
 const oneDirection = localFont({
   src: "../../../fonts/OneDirection.ttf",
@@ -14,7 +15,7 @@ export default function PrintLayout({
   return (
     <html lang="nl">
       <body className={`${oneDirection.variable} bg-white text-zinc-900`}>
-        {children}
+        <DisciplineProvider>{children}</DisciplineProvider>
       </body>
     </html>
   );

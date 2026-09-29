@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRoster } from "./context";
 import { DEFAULT_SOLVER_CONFIG } from "../defaults";
+import { formatAssignees } from "../display";
+import { useDisciplines } from "../../context/disciplineContext";
 import type { SolverConfig } from "../types";
 
 export default function ResultTab() {
   const { schedule, tasks, people, config, setConfig, handleDownload, loading } = useRoster();
+  const { groupOf } = useDisciplines();
   const [showConfig, setShowConfig] = useState(false);
 
   const sc = config.solver_config;
@@ -35,8 +38,8 @@ export default function ResultTab() {
 
   const taskName = (id: string) =>
     tasks.find((t) => t.id === id)?.name || id;
-  const personName = (id: string) =>
-    people.find((p) => p.id === id)?.name || id;
+  const cell = (day: string, task: string) =>
+    formatAssignees(schedule[day]?.[task] ?? [], task, people, groupOf) || "—";
 
   const days = Object.keys(schedule);
   const allTasks = new Set<string>();
@@ -99,7 +102,7 @@ export default function ResultTab() {
                     key={task}
                     className="px-4 py-2 border border-zinc-200 dark:border-zinc-700 print:px-2 print:py-1.5 print:border-zinc-400 print:text-[12px]"
                   >
-                    {schedule[day]?.[task]?.map(personName).join(", ") || "—"}
+                    {cell(day, task)}
                   </td>
                 ))}
               </tr>

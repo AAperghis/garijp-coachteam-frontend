@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import type { PersonInput, TaskInput, Schedule } from "../types";
 import { rosterStorageKey } from "../components/context";
+import { formatAssignees } from "../display";
+import { useDisciplines } from "../../context/disciplineContext";
 
 // Mirrors weekContext's storage key; the print page has no provider tree.
 const ACTIVE_WEEK_KEY = "active-week-id";
@@ -16,6 +18,7 @@ interface PersistedState {
 
 export default function PrintPage() {
   const [data, setData] = useState<PersistedState | null>(null);
+  const { groupOf } = useDisciplines();
 
   useEffect(() => {
     try {
@@ -42,8 +45,8 @@ export default function PrintPage() {
 
   const taskName = (id: string) =>
     tasks.find((t) => t.id === id)?.name || id;
-  const personName = (id: string) =>
-    people.find((p) => p.id === id)?.name || id;
+  const cell = (day: string, task: string) =>
+    formatAssignees(schedule[day]?.[task] ?? [], task, people, groupOf) || "—";
 
   const today = new Date().toLocaleDateString("nl-NL", {
     day: "numeric",
@@ -100,7 +103,7 @@ export default function PrintPage() {
                 </td>
                 {taskIds.map((t) => (
                   <td key={t} className="border border-zinc-300 px-2 py-1.5">
-                    {schedule[day]?.[t]?.map(personName).join(", ") || "—"}
+                    {cell(day, t)}
                   </td>
                 ))}
               </tr>
